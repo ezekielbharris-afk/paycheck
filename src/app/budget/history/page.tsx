@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/auth';
+import { createClient } from "@/../supabase/server";
 import { BudgetNavbar } from '@/components/budget/budget-navbar';
 
 export default async function BudgetHistoryPage() {

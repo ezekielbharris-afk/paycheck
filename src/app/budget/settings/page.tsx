@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/auth';
+import { createClient } from "@/../supabase/server";
 import { BudgetNavbar } from '@/components/budget/budget-navbar';
+import { InitializePaycheckButton } from '@/components/budget/initialize-paycheck-button';
 
 export default async function BudgetSettingsPage() {
   const supabase = await createClient();
@@ -45,6 +46,12 @@ export default async function BudgetSettingsPage() {
 
           <div className="bg-card border border-border rounded-[10px] p-8 text-center">
             <p className="text-muted-foreground">Category and bill management coming soon</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-[10px] p-6 space-y-4">
+            <h2 className="text-xl font-bold">Advanced</h2>
+            <p className="text-sm text-muted-foreground">Initialize categories for your current paycheck</p>
+            <InitializePaycheckButton />
           </div>
         </div>
       </div>

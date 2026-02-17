@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/utils/auth';
+import { createClient } from "@/../supabase/server";
 import { DashboardClient } from '@/components/budget/dashboard-client';
 
 export default async function BudgetPage() {

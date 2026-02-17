@@ -103,7 +103,7 @@ export default function OnboardingPage() {
 
       if (paycheckError) throw paycheckError;
 
-      await supabase.functions.invoke('supabase-functions-initialize-paycheck', {
+      await supabase.functions.invoke('initialize-paycheck', {
         body: {
           userId: user.id,
           paycheckId: paycheckData.id,
