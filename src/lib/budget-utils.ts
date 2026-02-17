@@ -1,5 +1,5 @@
 import { PayFrequency, BillFrequency } from '@/types/budget';
-import { addDays, addWeeks, addMonths, differenceInDays, format, parseISO } from 'date-fns';
+import { addDays, addWeeks, addMonths, subWeeks, subMonths, subDays, differenceInDays, format, parseISO } from 'date-fns';
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -23,6 +23,43 @@ export function calculateNextPayday(currentDate: Date, frequency: PayFrequency):
     default:
       return addWeeks(currentDate, 2);
   }
+}
+
+/**
+ * Given the user's next payday and pay frequency, compute the current
+ * pay period as { periodStart, periodEnd }.
+ *
+ * periodEnd  = nextPayday (exclusive — the next payday itself starts a new period)
+ * periodStart = nextPayday minus one pay-cycle length
+ *
+ * Example: biweekly, next payday = Feb 19
+ *   → periodStart = Feb 5, periodEnd = Feb 19
+ */
+export function calculatePayPeriod(
+  nextPayday: string | Date,
+  frequency: PayFrequency
+): { periodStart: Date; periodEnd: Date } {
+  const end = typeof nextPayday === 'string' ? parseISO(nextPayday) : nextPayday;
+
+  let start: Date;
+  switch (frequency) {
+    case 'weekly':
+      start = subWeeks(end, 1);
+      break;
+    case 'biweekly':
+      start = subWeeks(end, 2);
+      break;
+    case 'semimonthly':
+      start = subDays(end, 15);
+      break;
+    case 'monthly':
+      start = subMonths(end, 1);
+      break;
+    default:
+      start = subWeeks(end, 2);
+  }
+
+  return { periodStart: start, periodEnd: end };
 }
 
 export function calculateDaysUntil(targetDate: string | Date): number {

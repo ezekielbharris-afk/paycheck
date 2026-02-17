@@ -16,6 +16,8 @@ export interface Paycheck {
   id: string;
   user_id: string;
   pay_date: string;
+  period_start_date?: string;
+  period_end_date?: string;
   net_amount: number;
   reserved_bills: number;
   reserved_savings: number;

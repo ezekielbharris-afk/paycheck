@@ -46,7 +46,8 @@ export function DashboardClient() {
       if (currentPaycheck) {
         setPaycheck(currentPaycheck);
 
-        const { data: billPayments } = await supabase
+        // Fetch ALL bill_payments for this paycheck, including paid ones
+        const { data: billPayments, error: billsError } = await supabase
           .from('bill_payments')
           .select(`
             *,
@@ -54,6 +55,10 @@ export function DashboardClient() {
           `)
           .eq('paycheck_id', currentPaycheck.id)
           .order('due_date', { ascending: true });
+
+        if (billsError) {
+          console.error('Error fetching bill payments:', billsError);
+        }
 
         setBills(billPayments || []);
 
@@ -158,6 +163,8 @@ export function DashboardClient() {
         <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
           <DashboardHeader
             payDate={paycheck.pay_date}
+            periodStartDate={paycheck.period_start_date}
+            periodEndDate={paycheck.period_end_date}
             netAmount={paycheck.net_amount}
             daysUntilNext={daysUntilNext}
           />

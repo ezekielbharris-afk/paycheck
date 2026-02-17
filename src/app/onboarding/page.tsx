@@ -7,6 +7,7 @@ import { CategoriesStep } from '@/components/budget/onboarding/categories-step';
 import { BillsStep } from '@/components/budget/onboarding/bills-step';
 import { PayFrequency } from '@/types/budget';
 import { createClient } from '@/utils/auth';
+import { calculatePayPeriod } from '@/lib/budget-utils';
 
 export type OnboardingData = {
   frequency?: PayFrequency;
@@ -90,11 +91,23 @@ export default function OnboardingPage() {
         if (billsError) throw billsError;
       }
 
+      // Compute the active pay period window
+      // nextPayday is the END of the current period; the start is one cycle back
+      const { periodStart, periodEnd } = calculatePayPeriod(
+        data.nextPayday!,
+        data.frequency!
+      );
+
+      const periodStartStr = periodStart.toISOString().split('T')[0];
+      const periodEndStr = periodEnd.toISOString().split('T')[0];
+
       const { data: paycheckData, error: paycheckError } = await supabase
         .from('paychecks')
         .insert({
           user_id: user.id,
-          pay_date: data.nextPayday,
+          pay_date: periodStartStr,
+          period_start_date: periodStartStr,
+          period_end_date: periodEndStr,
           net_amount: data.netAmount,
           is_current: true,
         })

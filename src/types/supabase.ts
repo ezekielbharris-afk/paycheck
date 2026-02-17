@@ -259,6 +259,8 @@ export type Database = {
           is_current: boolean | null
           net_amount: number
           pay_date: string
+          period_end_date: string | null
+          period_start_date: string | null
           reserved_bills: number | null
           reserved_savings: number | null
           spendable: number | null
@@ -271,6 +273,8 @@ export type Database = {
           is_current?: boolean | null
           net_amount: number
           pay_date: string
+          period_end_date?: string | null
+          period_start_date?: string | null
           reserved_bills?: number | null
           reserved_savings?: number | null
           spendable?: number | null
@@ -283,6 +287,8 @@ export type Database = {
           is_current?: boolean | null
           net_amount?: number
           pay_date?: string
+          period_end_date?: string | null
+          period_start_date?: string | null
           reserved_bills?: number | null
           reserved_savings?: number | null
           spendable?: number | null
