@@ -7,6 +7,7 @@ import { DashboardHeader } from '@/components/budget/dashboard-header';
 import { SummaryCard } from '@/components/budget/summary-card';
 import { BillsList } from '@/components/budget/bills-list';
 import { CategoriesGrid } from '@/components/budget/categories-grid';
+import { AddBillDialog } from '@/components/budget/add-bill-dialog';
 import { Paycheck, BillPayment, CategorySpending, PaySchedule } from '@/types/budget';
 import { calculateDaysUntil } from '@/lib/budget-utils';
 
@@ -16,6 +17,7 @@ export function DashboardClient() {
   const [bills, setBills] = useState<BillPayment[]>([]);
   const [categories, setCategories] = useState<CategorySpending[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddBillOpen, setIsAddBillOpen] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -101,6 +103,44 @@ export function DashboardClient() {
     }
   };
 
+  const handleBillUndo = async (billPaymentId: string) => {
+    try {
+      const supabase = createClient();
+      
+      const { error } = await supabase
+        .from('bill_payments')
+        .update({
+          is_paid: false,
+          paid_at: null,
+          actual_amount: null,
+        })
+        .eq('id', billPaymentId);
+
+      if (error) throw error;
+
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error undoing bill payment:', error);
+    }
+  };
+
+  const handleBillDelete = async (billPaymentId: string) => {
+    try {
+      const supabase = createClient();
+      
+      const { error } = await supabase
+        .from('bill_payments')
+        .delete()
+        .eq('id', billPaymentId);
+
+      if (error) throw error;
+
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error deleting bill payment:', error);
+    }
+  };
+
   const handleSpendingLogged = async (categoryId: string, amount: number) => {
     try {
       const supabase = createClient();
@@ -136,6 +176,10 @@ export function DashboardClient() {
     } catch (error) {
       console.error('Error logging spending:', error);
     }
+  };
+
+  const handleBillAdded = () => {
+    loadDashboardData();
   };
 
   if (isLoading) {
@@ -176,11 +220,23 @@ export function DashboardClient() {
             spendable={paycheck.spendable}
           />
 
-          <BillsList bills={bills} onBillPaid={handleBillPaid} />
+          <BillsList 
+            bills={bills} 
+            onBillPaid={handleBillPaid}
+            onBillUndo={handleBillUndo}
+            onBillDelete={handleBillDelete}
+            onAddBill={() => setIsAddBillOpen(true)}
+          />
 
           <CategoriesGrid categories={categories} onSpendingLogged={handleSpendingLogged} />
         </div>
       </div>
+
+      <AddBillDialog
+        open={isAddBillOpen}
+        onOpenChange={setIsAddBillOpen}
+        onBillAdded={handleBillAdded}
+      />
     </>
   );
 }
