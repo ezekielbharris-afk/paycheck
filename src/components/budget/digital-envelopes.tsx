@@ -1347,10 +1347,10 @@ function EnvelopeCard({
   envelope: Envelope;
   onTap: () => void;
   isExpanded: boolean;
-  onLogSpending: () => void;
-  onEdit: () => void;
-  onEditTransaction: (tx: EnvelopeTransaction) => void;
-  onDeleteTransaction: (tx: EnvelopeTransaction) => void;
+  onLogSpending?: () => void;
+  onEdit?: () => void;
+  onEditTransaction?: (tx: EnvelopeTransaction) => void;
+  onDeleteTransaction?: (tx: EnvelopeTransaction) => void;
 }) {
   const colors = getStateColors(envelope.state);
   const pct = getPercentage(envelope.spent, envelope.allocated);
@@ -1408,28 +1408,30 @@ function EnvelopeCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              className="w-7 h-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#2a2520] transition-all duration-200 text-[#faf5eb]/40 hover:text-[#faf5eb]/70"
-              title="Edit category"
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {onEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#2a2520] transition-all duration-200 text-[#faf5eb]/40 hover:text-[#faf5eb]/70"
+                title="Edit category"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+            )}
             <span
               className={`text-[10px] tracking-wider font-semibold px-2 py-0.5 rounded border ${colors.badge}`}
             >
@@ -1510,71 +1512,79 @@ function EnvelopeCard({
                     -{formatMoney(tx.amount)}
                   </span>
                   {/* Edit / Delete actions — visible on hover */}
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover/tx:opacity-100 transition-opacity duration-150">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditTransaction(tx);
-                      }}
-                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-cyan-500/15 text-[#faf5eb]/30 hover:text-cyan-400 transition-colors"
-                      title="Edit transaction"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteTransaction(tx);
-                      }}
-                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/15 text-[#faf5eb]/30 hover:text-red-400 transition-colors"
-                      title="Delete transaction"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                  {(onEditTransaction || onDeleteTransaction) && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover/tx:opacity-100 transition-opacity duration-150">
+                      {onEditTransaction && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditTransaction(tx);
+                          }}
+                          className="w-6 h-6 flex items-center justify-center rounded hover:bg-cyan-500/15 text-[#faf5eb]/30 hover:text-cyan-400 transition-colors"
+                          title="Edit transaction"
+                        >
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                      {onDeleteTransaction && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteTransaction(tx);
+                          }}
+                          className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/15 text-[#faf5eb]/30 hover:text-red-400 transition-colors"
+                          title="Delete transaction"
+                        >
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))
           )}
           {/* Log Spending button */}
-          <button
-            className="w-full mt-3 py-2.5 rounded-md text-[12px] font-semibold tracking-wider transition-all duration-200 hover:brightness-110"
-            style={{
-              backgroundColor: colors.accentBg,
-              color: colors.accent,
-              border: `1px solid ${colors.accent}30`,
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onLogSpending();
-            }}
-          >
-            + LOG SPENDING
-          </button>
+          {onLogSpending && (
+            <button
+              className="w-full mt-3 py-2.5 rounded-md text-[12px] font-semibold tracking-wider transition-all duration-200 hover:brightness-110"
+              style={{
+                backgroundColor: colors.accentBg,
+                color: colors.accent,
+                border: `1px solid ${colors.accent}30`,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onLogSpending();
+              }}
+            >
+              + LOG SPENDING
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -1766,7 +1776,7 @@ function EnvelopesLoadingSkeleton() {
 
 // ─── Main Component ───────────────────────────────────────
 
-export function DigitalEnvelopes() {
+export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { paycheckIdOverride?: string; readOnly?: boolean } = {}) {
   const [envelopes, setEnvelopes] = useState<Envelope[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [logSpendingEnvelopeId, setLogSpendingEnvelopeId] = useState<
@@ -1818,31 +1828,47 @@ export function DigitalEnvelopes() {
 
       setUserId(user.id);
 
-      // Get the current paycheck
-      const { data: currentPaycheck, error: pcError } = await supabase
-        .from("paychecks")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_current", true)
-        .single();
-
-      if (pcError || !currentPaycheck) {
-        setEnvelopes([]);
-        setIsLoading(false);
-        return;
+      // Get the paycheck — either overridden (history) or current
+      let targetPaycheck;
+      if (paycheckIdOverride) {
+        const { data: pc, error: pcError } = await supabase
+          .from("paychecks")
+          .select("*")
+          .eq("id", paycheckIdOverride)
+          .eq("user_id", user.id)
+          .single();
+        if (pcError || !pc) {
+          setEnvelopes([]);
+          setIsLoading(false);
+          return;
+        }
+        targetPaycheck = pc;
+      } else {
+        const { data: pc, error: pcError } = await supabase
+          .from("paychecks")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_current", true)
+          .single();
+        if (pcError || !pc) {
+          setEnvelopes([]);
+          setIsLoading(false);
+          return;
+        }
+        targetPaycheck = pc;
       }
 
-      setPaycheckId(currentPaycheck.id);
+      setPaycheckId(targetPaycheck.id);
 
-      const periodStart = currentPaycheck.period_start_date;
-      const periodEnd = currentPaycheck.period_end_date;
-      const netAmount = Number(currentPaycheck.net_amount) || 0;
+      const periodStart = targetPaycheck.period_start_date;
+      const periodEnd = targetPaycheck.period_end_date;
+      const netAmount = Number(targetPaycheck.net_amount) || 0;
 
       // Fetch bill_payments assigned to this paycheck with due_date in period
       let billQuery = supabase
         .from("bill_payments")
         .select("planned_amount, actual_amount, is_paid, due_date")
-        .eq("paycheck_id", currentPaycheck.id);
+        .eq("paycheck_id", targetPaycheck.id);
 
       if (periodStart) {
         billQuery = billQuery.gte("due_date", periodStart);
@@ -1875,7 +1901,7 @@ export function DigitalEnvelopes() {
           category:categories(*)
         `,
         )
-        .eq("paycheck_id", currentPaycheck.id);
+        .eq("paycheck_id", targetPaycheck.id);
 
       if (csError) {
         throw new Error(`Failed to load categories: ${csError.message}`);
@@ -1885,19 +1911,15 @@ export function DigitalEnvelopes() {
       const { data: txns, error: txError } = await supabase
         .from("transactions")
         .select("*")
-        .eq("paycheck_id", currentPaycheck.id)
+        .eq("paycheck_id", targetPaycheck.id)
         .order("transaction_date", { ascending: false });
 
       if (txError) {
         throw new Error(`Failed to load transactions: ${txError.message}`);
       }
 
-      // Compute spendable = net pay - reserved bills - total category spending
-      const totalCategorySpent = (catSpending || []).reduce(
-        (sum, cs) => sum + (Number(cs.spent) || 0),
-        0,
-      );
-      const computedSpendable = netAmount - computedReservedBills - totalCategorySpent;
+      // Compute spendable = net pay - reserved bills
+      const computedSpendable = netAmount - computedReservedBills;
 
       setReservedBills(computedReservedBills);
       setSpendableLeft(computedSpendable);
@@ -1912,9 +1934,12 @@ export function DigitalEnvelopes() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [paycheckIdOverride]);
 
   useEffect(() => {
+    let mounted = true;
+
+    setIsLoading(true);
     loadData();
 
     // Set up Supabase realtime subscriptions for live updates
@@ -1925,26 +1950,39 @@ export function DigitalEnvelopes() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bill_payments" },
-        () => { loadData(); },
+        () => {
+          if (!mounted) return;
+          loadData();
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "transactions" },
-        () => { loadData(); },
+        () => {
+          if (!mounted) return;
+          loadData();
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "category_spending" },
-        () => { loadData(); },
+        () => {
+          if (!mounted) return;
+          loadData();
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "paychecks" },
-        () => { loadData(); },
+        () => {
+          if (!mounted) return;
+          loadData();
+        },
       )
       .subscribe();
 
     return () => {
+      mounted = false;
       supabase.removeChannel(channel);
     };
   }, [loadData]);
@@ -2465,42 +2503,47 @@ export function DigitalEnvelopes() {
             >
               Digital Envelopes
             </h2>
-            <button
-              onClick={handleOpenCreateCategory}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold tracking-wider bg-cyan-500 text-[#0f0d0a] hover:bg-cyan-400 transition-colors"
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            {!readOnly && (
+              <button
+                onClick={handleOpenCreateCategory}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold tracking-wider bg-cyan-500 text-[#0f0d0a] hover:bg-cyan-400 transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              NEW ENVELOPE
-            </button>
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                NEW ENVELOPE
+              </button>
+            )}
           </div>
           <div className="bg-[#1a1714] border border-[#2a2520] rounded-[10px] p-8 text-center">
             <div className="text-4xl mb-3">📂</div>
             <p className="text-[#faf5eb]/50 text-sm mb-4">
-              No budget envelopes yet. Create your first category to start
-              tracking your spending.
+              {readOnly
+                ? "No budget envelopes were created for this pay period."
+                : "No budget envelopes yet. Create your first category to start tracking your spending."}
             </p>
-            <button
-              onClick={handleOpenCreateCategory}
-              className="px-6 py-2.5 bg-cyan-500 text-[#0f0d0a] font-semibold text-sm rounded-lg hover:bg-cyan-400 transition-colors"
-            >
-              Create First Envelope
-            </button>
+            {!readOnly && (
+              <button
+                onClick={handleOpenCreateCategory}
+                className="px-6 py-2.5 bg-cyan-500 text-[#0f0d0a] font-semibold text-sm rounded-lg hover:bg-cyan-400 transition-colors"
+              >
+                Create First Envelope
+              </button>
+            )}
           </div>
         </div>
         {/* Create Category Dialog */}
-        {categoryDialogMode === "create" && (
+        {!readOnly && categoryDialogMode === "create" && (
           <CategoryDialog
             mode="create"
             onClose={handleCloseCategoryDialog}
@@ -2520,7 +2563,7 @@ export function DigitalEnvelopes() {
           envelopes={envelopes}
           reservedBills={reservedBills}
           spendableLeft={spendableLeft}
-          onCreateCategory={handleOpenCreateCategory}
+          onCreateCategory={readOnly ? undefined : handleOpenCreateCategory}
         />
 
         {/* Envelope Cards Grid */}
@@ -2531,12 +2574,12 @@ export function DigitalEnvelopes() {
               envelope={envelope}
               onTap={() => handleTap(envelope.id)}
               isExpanded={expandedId === envelope.id}
-              onLogSpending={() => handleOpenLogSpending(envelope.id)}
-              onEdit={() => handleOpenEditCategory(envelope)}
-              onEditTransaction={(tx) =>
+              onLogSpending={readOnly ? undefined : () => handleOpenLogSpending(envelope.id)}
+              onEdit={readOnly ? undefined : () => handleOpenEditCategory(envelope)}
+              onEditTransaction={readOnly ? undefined : (tx) =>
                 handleOpenEditTransaction(tx, envelope)
               }
-              onDeleteTransaction={(tx) =>
+              onDeleteTransaction={readOnly ? undefined : (tx) =>
                 handleOpenDeleteTransaction(tx, envelope)
               }
             />

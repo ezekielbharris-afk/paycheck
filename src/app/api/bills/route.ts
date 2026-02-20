@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
             .from('paychecks')
             .update({
               reserved_bills: totalBills,
-              spendable: currentPaycheck.net_amount - totalBills - currentPaycheck.reserved_savings,
+              spendable: currentPaycheck.net_amount - totalBills,
             })
             .eq('id', currentPaycheck.id);
         }

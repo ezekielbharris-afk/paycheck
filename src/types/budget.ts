@@ -78,6 +78,17 @@ export interface BillPayment {
   bill?: Bill;
 }
 
+/**
+ * A bill merged with its optional payment info for the current pay period.
+ * Always present in the grid (from the `bills` table); payment data may be absent
+ * if no bill_payment row exists for the displayed paycheck.
+ */
+export interface BillGridItem {
+  bill: Bill;
+  payment: BillPayment | null;
+  isInCurrentPeriod: boolean;
+}
+
 export interface Transaction {
   id: string;
   user_id: string;

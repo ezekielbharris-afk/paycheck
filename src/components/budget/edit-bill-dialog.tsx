@@ -38,7 +38,7 @@ interface EditBillDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onBillUpdated: () => void;
-  onBillPaid: (billPaymentId: string, actualAmount: number) => void;
+  onBillPaid: (billPaymentId: string, actualAmount: number, billId?: string, plannedAmount?: number) => void;
   onBillUndo?: (billPaymentId: string) => void;
 }
 
@@ -158,15 +158,28 @@ export function EditBillDialog({
 
   const handleMarkPaid = () => {
     if (!bill) return;
-    onBillPaid(bill.id, parseFloat(actualAmount));
-    toast.success("Bill marked as paid");
+
+    // Pass bill_id and planned_amount for cases where bill_payment doesn't exist yet
+    onBillPaid(
+      bill.id, 
+      parseFloat(actualAmount),
+      bill.bill_id,
+      bill.planned_amount
+    );
     onOpenChange(false);
   };
 
   const handleUndo = () => {
     if (!bill || !onBillUndo) return;
+
+    if (!bill.id) {
+      toast.error("Unable to undo payment", {
+        description: "This bill hasn't been paid yet.",
+      });
+      return;
+    }
+
     onBillUndo(bill.id);
-    toast.success("Payment undone");
     onOpenChange(false);
   };
 
