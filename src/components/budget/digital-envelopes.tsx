@@ -18,6 +18,8 @@ interface EnvelopeTransaction {
   label: string;
   amount: number;
   date: string;
+  rawDate: string; // ISO date for editing
+  categoryId: string;
 }
 
 interface Envelope {
@@ -109,6 +111,8 @@ function buildEnvelopes(
         label: t.description || "Spending",
         amount: Number(t.amount),
         date: formatDateLabel(t.transaction_date),
+        rawDate: t.transaction_date,
+        categoryId: t.category_id ?? cs.category_id,
       })),
     };
   });
@@ -548,6 +552,400 @@ function LogSpendingDialog({
   );
 }
 
+// ─── Edit Transaction Dialog ───────────────────────────────
+
+function EditTransactionDialog({
+  transaction,
+  envelopeName,
+  envelopeIcon,
+  onClose,
+  onSubmit,
+  isSubmitting,
+}: {
+  transaction: EnvelopeTransaction;
+  envelopeName: string;
+  envelopeIcon: string;
+  onClose: () => void;
+  onSubmit: (data: {
+    id: string;
+    amount: number;
+    description: string;
+    date: string;
+  }) => Promise<void>;
+  isSubmitting: boolean;
+}) {
+  const [amountStr, setAmountStr] = useState(transaction.amount.toFixed(2));
+  const [description, setDescription] = useState(transaction.label === "Spending" ? "" : transaction.label);
+  const [date, setDate] = useState(transaction.rawDate);
+  const [error, setError] = useState("");
+  const amountRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => amountRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) onClose();
+  };
+
+  const handleAmountChange = (value: string) => {
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    const parts = cleaned.split(".");
+    if (parts.length > 2) return;
+    if (parts[1] && parts[1].length > 2) return;
+    setAmountStr(cleaned);
+    setError("");
+  };
+
+  const parsedAmount = parseFloat(amountStr);
+  const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
+
+  const handleSubmit = async () => {
+    if (!amountStr.trim()) {
+      setError("Amount is required");
+      amountRef.current?.focus();
+      return;
+    }
+    if (!isValidAmount) {
+      setError("Enter a valid amount");
+      amountRef.current?.focus();
+      return;
+    }
+
+    try {
+      await onSubmit({
+        id: transaction.id,
+        amount: parsedAmount,
+        description: description.trim(),
+        date,
+      });
+    } catch {
+      setError("Failed to save. Please try again.");
+    }
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleOverlayClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        className="relative w-full max-w-[420px] bg-[#1a1714] border border-[#2a2520] rounded-[12px] overflow-hidden"
+        style={{
+          boxShadow: "0 0 40px rgba(0,0,0,0.5), 0 0 80px rgba(6,182,212,0.05)",
+        }}
+      >
+        {/* Top accent */}
+        <div
+          className="absolute top-0 left-0 right-0 h-[2px]"
+          style={{ backgroundColor: "#06B6D4", opacity: 0.8 }}
+        />
+
+        {/* Header */}
+        <div className="p-5 pb-0">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">{envelopeIcon}</span>
+              <div>
+                <div className="text-[10px] text-[#faf5eb]/30 tracking-[0.2em]">
+                  EDIT TRANSACTION
+                </div>
+                <h3 className="font-bold text-[#faf5eb] text-lg leading-tight">
+                  {envelopeName}
+                </h3>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#2a2520] transition-colors text-[#faf5eb]/40 hover:text-[#faf5eb]/70"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Form */}
+        <div className="p-5 space-y-4">
+          {/* Amount field */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] text-[#faf5eb]/50 tracking-[0.1em] font-medium">
+              AMOUNT <span className="text-red-400">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#faf5eb]/30 text-lg font-bold">
+                $
+              </span>
+              <input
+                ref={amountRef}
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={amountStr}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSubmit();
+                }}
+                className={`w-full bg-[#0f0d0a] border rounded-lg pl-8 pr-4 py-3 text-2xl font-bold text-[#faf5eb] placeholder-[#faf5eb]/15 focus:outline-none transition-colors ${
+                  error
+                    ? "border-red-500/60 focus:border-red-400"
+                    : "border-[#2a2520] focus:border-[#3a3530]"
+                }`}
+                style={{ fontFeatureSettings: "'tnum' on" }}
+              />
+            </div>
+            {error && (
+              <div className="text-red-400 text-[11px] font-medium">
+                {error}
+              </div>
+            )}
+          </div>
+
+          {/* Description field */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] text-[#faf5eb]/50 tracking-[0.1em] font-medium">
+              DESCRIPTION
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Gas station, Groceries"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSubmit();
+              }}
+              className="w-full bg-[#0f0d0a] border border-[#2a2520] rounded-lg px-4 py-2.5 text-[14px] text-[#faf5eb] placeholder-[#faf5eb]/20 focus:outline-none focus:border-[#3a3530] transition-colors"
+            />
+          </div>
+
+          {/* Date field */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] text-[#faf5eb]/50 tracking-[0.1em] font-medium">
+              DATE
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-[#0f0d0a] border border-[#2a2520] rounded-lg px-4 py-2.5 text-[14px] text-[#faf5eb] focus:outline-none focus:border-[#3a3530] transition-colors [color-scheme:dark]"
+            />
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="px-5 pb-5 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-lg text-[13px] font-semibold tracking-wider text-[#faf5eb]/50 border border-[#2a2520] hover:bg-[#2a2520]/50 hover:text-[#faf5eb]/70 transition-all duration-200"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-[2] py-3 rounded-lg text-[13px] font-semibold tracking-wider transition-all duration-200 disabled:opacity-50 bg-cyan-500 text-[#0f0d0a] hover:bg-cyan-400"
+          >
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg
+                  className="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                SAVING...
+              </span>
+            ) : (
+              "SAVE CHANGES"
+            )}
+          </button>
+        </div>
+
+        {/* Keyboard shortcut hint */}
+        <div className="px-5 pb-4 flex justify-center">
+          <span className="text-[10px] text-[#faf5eb]/20 tracking-wider">
+            PRESS ENTER TO SUBMIT · ESC TO CLOSE
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Delete Transaction Confirm Dialog ─────────────────────
+
+function DeleteTransactionConfirm({
+  transaction,
+  envelopeName,
+  onClose,
+  onConfirm,
+  isSubmitting,
+}: {
+  transaction: EnvelopeTransaction;
+  envelopeName: string;
+  onClose: () => void;
+  onConfirm: (txId: string) => Promise<void>;
+  isSubmitting: boolean;
+}) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) onClose();
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      onClick={handleOverlayClick}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        className="relative w-full max-w-[380px] bg-[#1a1714] border border-[#2a2520] rounded-[12px] overflow-hidden"
+        style={{
+          boxShadow: "0 0 40px rgba(0,0,0,0.5), 0 0 80px rgba(239,68,68,0.05)",
+        }}
+      >
+        {/* Top accent - red for destructive */}
+        <div
+          className="absolute top-0 left-0 right-0 h-[2px]"
+          style={{ backgroundColor: "#EF4444", opacity: 0.8 }}
+        />
+
+        <div className="p-5 space-y-4">
+          {/* Warning icon */}
+          <div className="flex justify-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <h3 className="font-bold text-[#faf5eb] text-lg mb-1">
+              Delete Transaction?
+            </h3>
+            <p className="text-[#faf5eb]/50 text-[13px] leading-relaxed">
+              Remove{" "}
+              <span className="text-[#faf5eb]/80 font-medium">
+                {formatMoney(transaction.amount)}
+              </span>{" "}
+              ({transaction.label}) from{" "}
+              <span className="text-[#faf5eb]/80 font-medium">
+                {envelopeName}
+              </span>
+              ? This will restore the amount to your envelope budget.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 rounded-lg text-[13px] font-semibold tracking-wider text-[#faf5eb]/50 border border-[#2a2520] hover:bg-[#2a2520]/50 hover:text-[#faf5eb]/70 transition-all duration-200"
+            >
+              CANCEL
+            </button>
+            <button
+              onClick={() => onConfirm(transaction.id)}
+              disabled={isSubmitting}
+              className="flex-[2] py-3 rounded-lg text-[13px] font-semibold tracking-wider transition-all duration-200 disabled:opacity-50 bg-red-500 text-white hover:bg-red-400"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-4 h-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  DELETING...
+                </span>
+              ) : (
+                "DELETE"
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Create / Edit Category Dialog ─────────────────────────
 
 function CategoryDialog({
@@ -941,12 +1339,16 @@ function EnvelopeCard({
   isExpanded,
   onLogSpending,
   onEdit,
+  onEditTransaction,
+  onDeleteTransaction,
 }: {
   envelope: Envelope;
   onTap: () => void;
   isExpanded: boolean;
   onLogSpending: () => void;
   onEdit: () => void;
+  onEditTransaction: (tx: EnvelopeTransaction) => void;
+  onDeleteTransaction: (tx: EnvelopeTransaction) => void;
 }) {
   const colors = getStateColors(envelope.state);
   const pct = getPercentage(envelope.spent, envelope.allocated);
@@ -1094,16 +1496,45 @@ function EnvelopeCard({
             envelope.transactions.map((tx) => (
               <div
                 key={tx.id}
-                className="flex items-center justify-between text-[12px]"
+                className="group/tx flex items-center justify-between text-[12px] py-1.5 -mx-2 px-2 rounded-md hover:bg-[#faf5eb]/[0.03] transition-colors"
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-[#faf5eb]/20" />
-                  <span className="text-[#faf5eb]/70">{tx.label}</span>
-                  <span className="text-[#faf5eb]/25">{tx.date}</span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-1 h-1 rounded-full bg-[#faf5eb]/20 shrink-0" />
+                  <span className="text-[#faf5eb]/70 truncate">{tx.label}</span>
+                  <span className="text-[#faf5eb]/25 shrink-0">{tx.date}</span>
                 </div>
-                <span className="text-[#faf5eb]/60 font-medium">
-                  -{formatMoney(tx.amount)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#faf5eb]/60 font-medium">
+                    -{formatMoney(tx.amount)}
+                  </span>
+                  {/* Edit / Delete actions — visible on hover */}
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover/tx:opacity-100 transition-opacity duration-150">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditTransaction(tx);
+                      }}
+                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-cyan-500/15 text-[#faf5eb]/30 hover:text-cyan-400 transition-colors"
+                      title="Edit transaction"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteTransaction(tx);
+                      }}
+                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/15 text-[#faf5eb]/30 hover:text-red-400 transition-colors"
+                      title="Delete transaction"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             ))
           )}
@@ -1298,6 +1729,16 @@ export function DigitalEnvelopes() {
   const [editingEnvelope, setEditingEnvelope] = useState<Envelope | undefined>(
     undefined,
   );
+
+  // Transaction edit/delete dialog state
+  const [editingTransaction, setEditingTransaction] = useState<{
+    tx: EnvelopeTransaction;
+    envelope: Envelope;
+  } | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<{
+    tx: EnvelopeTransaction;
+    envelope: Envelope;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -1643,6 +2084,8 @@ export function DigitalEnvelopes() {
                 label: noteText || "Spending",
                 amount,
                 date: formatDateLabel(dateStr),
+                rawDate: dateStr,
+                categoryId: envelopeId,
               },
               ...env.transactions,
             ],
@@ -1657,6 +2100,172 @@ export function DigitalEnvelopes() {
     } catch (err) {
       console.error("Error submitting spending:", err);
       throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ── Edit Transaction ──
+  const handleOpenEditTransaction = (tx: EnvelopeTransaction, envelope: Envelope) => {
+    setEditingTransaction({ tx, envelope });
+  };
+
+  const handleEditTransactionSubmit = async (data: {
+    id: string;
+    amount: number;
+    description: string;
+    date: string;
+  }) => {
+    if (!paycheckId || !userId || !editingTransaction) return;
+    setIsSubmitting(true);
+
+    try {
+      const supabase = createClient();
+      const { tx, envelope } = editingTransaction;
+      const oldAmount = tx.amount;
+      const newAmount = data.amount;
+      const delta = newAmount - oldAmount;
+
+      // 1. Update the transaction row
+      const { error: txError } = await supabase
+        .from("transactions")
+        .update({
+          amount: newAmount,
+          description: data.description || null,
+          transaction_date: data.date,
+        })
+        .eq("id", data.id);
+
+      if (txError) {
+        throw new Error(`Failed to update transaction: ${txError.message}`);
+      }
+
+      // 2. Update category_spending.spent
+      const newSpent = envelope.spent + delta;
+      const { error: csError } = await supabase
+        .from("category_spending")
+        .update({
+          spent: Math.max(0, newSpent),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", envelope.categorySpendingId);
+
+      if (csError) {
+        throw new Error(`Failed to update category spending: ${csError.message}`);
+      }
+
+      // 3. Optimistically update local state
+      setEnvelopes((prev) =>
+        prev.map((env) => {
+          if (env.id !== envelope.id) return env;
+          const updatedSpent = Math.max(0, env.spent + delta);
+          const updatedRemaining = env.allocated - updatedSpent;
+          return {
+            ...env,
+            spent: updatedSpent,
+            remaining: updatedRemaining,
+            state: computeState(updatedSpent, env.allocated),
+            transactions: env.transactions.map((t) =>
+              t.id === data.id
+                ? {
+                    ...t,
+                    amount: newAmount,
+                    label: data.description || "Spending",
+                    date: formatDateLabel(data.date),
+                    rawDate: data.date,
+                  }
+                : t,
+            ),
+          };
+        }),
+      );
+
+      setEditingTransaction(null);
+
+      toast.success("Transaction updated", {
+        description: `Updated to ${formatMoney(newAmount)}`,
+      });
+
+      // Reload fresh data in background
+      setTimeout(() => loadData(), 500);
+    } catch (err) {
+      console.error("Error editing transaction:", err);
+      toast.error("Couldn't update transaction", {
+        description:
+          err instanceof Error ? err.message : "Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ── Delete Transaction ──
+  const handleOpenDeleteTransaction = (tx: EnvelopeTransaction, envelope: Envelope) => {
+    setDeletingTransaction({ tx, envelope });
+  };
+
+  const handleDeleteTransactionConfirm = async (txId: string) => {
+    if (!paycheckId || !userId || !deletingTransaction) return;
+    setIsSubmitting(true);
+
+    try {
+      const supabase = createClient();
+      const { tx, envelope } = deletingTransaction;
+
+      // 1. Delete the transaction row
+      const { error: txError } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", txId);
+
+      if (txError) {
+        throw new Error(`Failed to delete transaction: ${txError.message}`);
+      }
+
+      // 2. Update category_spending.spent
+      const newSpent = Math.max(0, envelope.spent - tx.amount);
+      const { error: csError } = await supabase
+        .from("category_spending")
+        .update({
+          spent: newSpent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", envelope.categorySpendingId);
+
+      if (csError) {
+        throw new Error(`Failed to update category spending: ${csError.message}`);
+      }
+
+      // 3. Optimistically update local state
+      setEnvelopes((prev) =>
+        prev.map((env) => {
+          if (env.id !== envelope.id) return env;
+          const updatedSpent = Math.max(0, env.spent - tx.amount);
+          const updatedRemaining = env.allocated - updatedSpent;
+          return {
+            ...env,
+            spent: updatedSpent,
+            remaining: updatedRemaining,
+            state: computeState(updatedSpent, env.allocated),
+            transactions: env.transactions.filter((t) => t.id !== txId),
+          };
+        }),
+      );
+
+      setDeletingTransaction(null);
+
+      toast.success("Transaction deleted", {
+        description: `${formatMoney(tx.amount)} restored to ${envelope.name}`,
+      });
+
+      // Reload fresh data in background
+      setTimeout(() => loadData(), 500);
+    } catch (err) {
+      console.error("Error deleting transaction:", err);
+      toast.error("Couldn't delete transaction", {
+        description:
+          err instanceof Error ? err.message : "Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1786,6 +2395,8 @@ export function DigitalEnvelopes() {
               isExpanded={expandedId === envelope.id}
               onLogSpending={() => handleOpenLogSpending(envelope.id)}
               onEdit={() => handleOpenEditCategory(envelope)}
+              onEditTransaction={(tx) => handleOpenEditTransaction(tx, envelope)}
+              onDeleteTransaction={(tx) => handleOpenDeleteTransaction(tx, envelope)}
             />
           ))}
         </div>
@@ -1818,6 +2429,29 @@ export function DigitalEnvelopes() {
           onDelete={
             categoryDialogMode === "edit" ? handleDeleteCategory : undefined
           }
+          isSubmitting={isSubmitting}
+        />
+      )}
+
+      {/* Edit Transaction Dialog */}
+      {editingTransaction && (
+        <EditTransactionDialog
+          transaction={editingTransaction.tx}
+          envelopeName={editingTransaction.envelope.name}
+          envelopeIcon={editingTransaction.envelope.icon}
+          onClose={() => setEditingTransaction(null)}
+          onSubmit={handleEditTransactionSubmit}
+          isSubmitting={isSubmitting}
+        />
+      )}
+
+      {/* Delete Transaction Confirm Dialog */}
+      {deletingTransaction && (
+        <DeleteTransactionConfirm
+          transaction={deletingTransaction.tx}
+          envelopeName={deletingTransaction.envelope.name}
+          onClose={() => setDeletingTransaction(null)}
+          onConfirm={handleDeleteTransactionConfirm}
           isSubmitting={isSubmitting}
         />
       )}

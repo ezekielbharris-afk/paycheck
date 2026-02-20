@@ -97,7 +97,6 @@ export function BillsGrid({
             Organized chronologically through the month
           </p>
         </div>
-
         {/* Bills Grid */}
         <div className="grid gap-4 relative grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-8">
           {Array.from(groupedBills.entries()).map(
@@ -147,13 +146,13 @@ export function BillsGrid({
                           <div
                             onClick={() => handleBillClick(billPayment)}
                             className={`
-                          relative border-2 border-[#2a2520] bg-[#1a1714]
-                          rounded px-3 py-2 cursor-pointer
-                          transition-all duration-200 ease-in-out
-                          hover:scale-105 hover:brightness-125
-                          ${!isGroupInCurrentPeriod ? "opacity-30" : isPaid ? "opacity-50" : "opacity-100"}
-                          min-w-[100px]
-                        `}
+                        relative border-2 border-[#2a2520] bg-[#1a1714]
+                        rounded px-3 py-2 cursor-pointer
+                        transition-all duration-200 ease-in-out
+                        hover:scale-105 hover:brightness-125
+                        ${!isGroupInCurrentPeriod ? "opacity-30" : isPaid ? "opacity-50" : "opacity-100"}
+                        min-w-[100px]
+                      `}
                           >
                             {/* Paid checkmark */}
                             {isPaid && (
@@ -183,42 +182,7 @@ export function BillsGrid({
             },
           )}
         </div>
-
         {/* Summary Stats */}
-        <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-[#1a1714] border border-[#2a2520] rounded-lg p-5">
-            <div className="text-xs font-light text-[#faf5eb]/60 mb-1">
-              Total Bills
-            </div>
-            <div className="text-2xl font-black text-[#faf5eb]">
-              {totalBills}
-            </div>
-          </div>
-          <div className="bg-[#1a1714] border border-[#2a2520] rounded-lg p-5">
-            <div className="text-xs font-light text-[#faf5eb]/60 mb-1">
-              Total Due
-            </div>
-            <div className="text-2xl font-black text-[#faf5eb]">
-              {formatCurrency(totalDue)}
-            </div>
-          </div>
-          <div className="bg-[#1a1714] border border-[#2a2520] rounded-lg p-5">
-            <div className="text-xs font-light text-[#faf5eb]/60 mb-1">
-              Paid
-            </div>
-            <div className="text-2xl font-black text-[#10b981]">
-              {paidCount}
-            </div>
-          </div>
-          <div className="bg-[#1a1714] border border-[#2a2520] rounded-lg p-5">
-            <div className="text-xs font-light text-[#faf5eb]/60 mb-1">
-              Unpaid
-            </div>
-            <div className="text-2xl font-black text-[#ef4444]">
-              {unpaidCount}
-            </div>
-          </div>
-        </div>
       </div>
       {/* Edit Bill Dialog */}
       <EditBillDialog
