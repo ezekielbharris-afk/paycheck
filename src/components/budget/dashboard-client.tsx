@@ -247,6 +247,8 @@ export function DashboardClient() {
             onBillUndo={handleBillUndo}
             onBillDelete={handleBillDelete}
             onAddBill={() => setIsAddBillOpen(true)}
+            periodStartDate={paycheck.period_start_date}
+            periodEndDate={paycheck.period_end_date}
           />
         </div>
       </div>

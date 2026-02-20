@@ -20,6 +20,8 @@ interface BillsGridProps {
   onBillUndo?: (billPaymentId: string) => void;
   onBillDelete?: (billPaymentId: string) => void;
   onAddBill?: () => void;
+  periodStartDate?: string;
+  periodEndDate?: string;
 }
 
 /**
@@ -30,7 +32,10 @@ function getBillSymbol(name: string): string {
   if (!name) return "??";
   const words = name.trim().split(/\s+/);
   if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).charAt(0).toUpperCase() + (words[0][0] + words[1][0]).charAt(1).toLowerCase();
+    return (
+      (words[0][0] + words[1][0]).charAt(0).toUpperCase() +
+      (words[0][0] + words[1][0]).charAt(1).toLowerCase()
+    );
   }
   if (name.length === 1) return name[0].toUpperCase() + name[0].toLowerCase();
   return name[0].toUpperCase() + name[1].toLowerCase();
@@ -41,17 +46,17 @@ function getBillSymbol(name: string): string {
  */
 function groupBillsByDueDay(bills: BillPayment[]): Map<number, BillPayment[]> {
   const groups = new Map<number, BillPayment[]>();
-  
+
   for (const bill of bills) {
     const dueDate = new Date(bill.due_date);
     const dueDay = dueDate.getDate();
-    
+
     if (!groups.has(dueDay)) {
       groups.set(dueDay, []);
     }
     groups.get(dueDay)!.push(bill);
   }
-  
+
   return new Map([...groups.entries()].sort((a, b) => a[0] - b[0]));
 }
 
@@ -61,6 +66,8 @@ export function BillsGrid({
   onBillUndo,
   onBillDelete,
   onAddBill,
+  periodStartDate,
+  periodEndDate,
 }: BillsGridProps) {
   const [selectedBill, setSelectedBill] = useState<BillPayment | null>(null);
   const [actualAmount, setActualAmount] = useState("");
@@ -130,7 +137,7 @@ export function BillsGrid({
         </div>
 
         {/* Bills Grid */}
-        <div className="flex flex-wrap gap-4 relative">
+        <div className="grid gap-4 relative" style={{ gridTemplateColumns: `repeat(min(${groupedBills.size}, 12), 1fr)` }}>
           {Array.from(groupedBills.entries()).map(
             ([dueDay, dueDayBills], groupIndex) => {
               const groupTotal = dueDayBills.reduce(
@@ -138,15 +145,27 @@ export function BillsGrid({
                 0,
               );
 
+              // Determine if this due day group falls within the current pay period
+              const periodStartDay = periodStartDate
+                ? new Date(periodStartDate).getDate()
+                : null;
+              const periodEndDay = periodEndDate
+                ? new Date(periodEndDate).getDate()
+                : null;
+              const isGroupInCurrentPeriod =
+                periodStartDay !== null && periodEndDay !== null
+                  ? periodStartDay <= dueDay && dueDay <= periodEndDay
+                  : true;
+
               return (
                 <div
                   key={dueDay}
-                  className={`flex flex-col gap-2 relative ${
-                    groupIndex > 0
-                      ? "before:absolute before:-top-6 before:left-0 before:right-0 before:h-0.5 before:bg-[#06B6D4]/50"
-                      : ""
-                  }`}
+                  className="flex flex-col gap-2 relative"
                 >
+                  {/* Cyan period indicator line - above the day header */}
+                  {isGroupInCurrentPeriod && (
+                    <div className="border-t-2 border-[#06B6D4]" />
+                  )}
                   {/* Due Day Header */}
                   <div className="flex-shrink-0 text-center px-2 py-1 bg-[#1a1714] border border-[#2a2520] rounded">
                     <div className="text-lg font-black text-[#06B6D4]">
@@ -156,56 +175,50 @@ export function BillsGrid({
                       DUE
                     </div>
                   </div>
-
                   {/* Bill Cards for this due day */}
                   <div className="flex flex-col gap-2">
-                    {dueDayBills.map((billPayment) => {
+                    {dueDayBills.map((billPayment, billIndex) => {
                       const isPaid = billPayment.is_paid;
-                      const billName =
-                        billPayment.bill?.name || "Unknown Bill";
+                      const billName = billPayment.bill?.name || "Unknown Bill";
                       const amount =
-                        billPayment.actual_amount ||
-                        billPayment.planned_amount;
+                        billPayment.actual_amount || billPayment.planned_amount;
 
                       return (
-                        <div
-                          key={billPayment.id}
-                          onClick={() => handleBillClick(billPayment)}
-                          className={`
+                        <div key={billPayment.id}>
+                          <div
+                            onClick={() => handleBillClick(billPayment)}
+                            className={`
                             relative border-2 border-[#2a2520] bg-[#1a1714]
                             rounded px-3 py-2 cursor-pointer
                             transition-all duration-200 ease-in-out
                             hover:scale-105 hover:brightness-125
-                            ${isPaid ? "opacity-50" : "opacity-100"}
+                            ${!isGroupInCurrentPeriod ? "opacity-30" : isPaid ? "opacity-50" : "opacity-100"}
                             min-w-[100px]
                           `}
-                        >
-                          {/* Paid checkmark */}
-                          {isPaid && (
-                            <div className="absolute -top-1 -right-1 text-xs font-bold text-[#10b981] bg-[#0f0d0a] rounded-full w-4 h-4 flex items-center justify-center">
-                              ✓
+                          >
+                            {/* Paid checkmark */}
+                            {isPaid && (
+                              <div className="absolute -top-1 -right-1 text-xs font-bold text-[#10b981] bg-[#0f0d0a] rounded-full w-4 h-4 flex items-center justify-center">
+                                ✓
+                              </div>
+                            )}
+                            {/* Symbol */}
+                            <div className="text-2xl font-black text-[#faf5eb] mb-1">
+                              {getBillSymbol(billName)}
                             </div>
-                          )}
-
-                          {/* Symbol */}
-                          <div className="text-2xl font-black text-[#faf5eb] mb-1">
-                            {getBillSymbol(billName)}
-                          </div>
-
-                          {/* Name */}
-                          <div className="text-xs font-light text-[#faf5eb]/70 mb-1 leading-tight">
-                            {billName}
-                          </div>
-
-                          {/* Amount */}
-                          <div className="text-sm font-bold text-[#06B6D4]">
-                            {formatCurrency(amount)}
+                            {/* Name */}
+                            <div className="text-xs font-light text-[#faf5eb]/70 mb-1 leading-tight">
+                              {billName}
+                            </div>
+                            {/* Amount */}
+                            <div className="text-sm font-bold text-[#06B6D4]">
+                              {formatCurrency(amount)}
+                            </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-
                   {/* Group total */}
                   <div className="text-center text-xs font-light text-[#faf5eb]/60">
                     {formatCurrency(groupTotal)}
@@ -252,7 +265,6 @@ export function BillsGrid({
           </div>
         </div>
       </div>
-
       {/* Mark as Paid Dialog */}
       <Dialog open={!!selectedBill} onOpenChange={() => setSelectedBill(null)}>
         <DialogContent className="bg-[#1a1714] border-[#2a2520] text-[#faf5eb]">
