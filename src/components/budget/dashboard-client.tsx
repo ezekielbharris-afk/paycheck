@@ -6,12 +6,11 @@ import { BudgetNavbar } from "@/components/budget/budget-navbar";
 import { DashboardHeader } from "@/components/budget/dashboard-header";
 import { SummaryCard } from "@/components/budget/summary-card";
 import { BillsGrid } from "@/components/budget/bills-grid";
-import { CategoriesGrid } from "@/components/budget/categories-grid";
+import { DigitalEnvelopes } from "@/components/budget/digital-envelopes";
 import { AddBillDialog } from "@/components/budget/add-bill-dialog";
 import {
   Paycheck,
   BillPayment,
-  CategorySpending,
   PaySchedule,
 } from "@/types/budget";
 import { calculateDaysUntil } from "@/lib/budget-utils";
@@ -21,7 +20,6 @@ export function DashboardClient() {
   const [paycheck, setPaycheck] = useState<Paycheck | null>(null);
   const [paySchedule, setPaySchedule] = useState<PaySchedule | null>(null);
   const [bills, setBills] = useState<BillPayment[]>([]);
-  const [categories, setCategories] = useState<CategorySpending[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddBillOpen, setIsAddBillOpen] = useState(false);
 
@@ -73,19 +71,6 @@ export function DashboardClient() {
         }
 
         setBills(billPayments || []);
-
-        const { data: categorySpending } = await supabase
-          .from("category_spending")
-          .select(
-            `
-            *,
-            category:categories(*)
-          `,
-          )
-          .eq("paycheck_id", currentPaycheck.id)
-          .order("category.priority", { ascending: true });
-
-        setCategories(categorySpending || []);
       }
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -165,50 +150,6 @@ export function DashboardClient() {
     }
   };
 
-  const handleSpendingLogged = async (categoryId: string, amount: number) => {
-    try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user || !paycheck) return;
-
-      const { error: transactionError } = await supabase
-        .from("transactions")
-        .insert({
-          user_id: user.id,
-          paycheck_id: paycheck.id,
-          category_id: categoryId,
-          amount,
-          transaction_date: new Date().toISOString().split("T")[0],
-        });
-
-      if (transactionError) throw transactionError;
-
-      const categorySpend = categories.find(
-        (c) => c.category_id === categoryId,
-      );
-      if (categorySpend) {
-        const { error: updateError } = await supabase
-          .from("category_spending")
-          .update({
-            spent: categorySpend.spent + amount,
-          })
-          .eq("id", categorySpend.id);
-
-        if (updateError) throw updateError;
-      }
-
-      await loadDashboardData();
-    } catch (error) {
-      console.error("Error logging spending:", error);
-      toast.error("Failed to log spending", {
-        description: "Please try again.",
-      });
-    }
-  };
-
   const handleBillAdded = () => {
     loadDashboardData();
   };
@@ -250,10 +191,7 @@ export function DashboardClient() {
             spendable={paycheck.spendable}
           />
 
-          <CategoriesGrid
-            categories={categories}
-            onSpendingLogged={handleSpendingLogged}
-          />
+          <DigitalEnvelopes />
           <BillsGrid
             bills={bills}
             onBillPaid={handleBillPaid}
