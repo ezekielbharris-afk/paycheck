@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/auth";
 import { toast } from "sonner";
 import type {
@@ -575,7 +575,9 @@ function EditTransactionDialog({
   isSubmitting: boolean;
 }) {
   const [amountStr, setAmountStr] = useState(transaction.amount.toFixed(2));
-  const [description, setDescription] = useState(transaction.label === "Spending" ? "" : transaction.label);
+  const [description, setDescription] = useState(
+    transaction.label === "Spending" ? "" : transaction.label,
+  );
   const [date, setDate] = useState(transaction.rawDate);
   const [error, setError] = useState("");
   const amountRef = useRef<HTMLInputElement>(null);
@@ -1131,7 +1133,7 @@ function CategoryDialog({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2.5">
               <span className="text-xl">
-                {mode === "create" ? "✨" : envelope?.icon ?? "📂"}
+                {mode === "create" ? "✨" : (envelope?.icon ?? "📂")}
               </span>
               <div>
                 <div className="text-[10px] text-[#faf5eb]/30 tracking-[0.2em]">
@@ -1140,7 +1142,7 @@ function CategoryDialog({
                 <h3 className="font-bold text-[#faf5eb] text-lg leading-tight">
                   {mode === "create"
                     ? "Create Category"
-                    : envelope?.name ?? "Edit"}
+                    : (envelope?.name ?? "Edit")}
                 </h3>
               </div>
             </div>
@@ -1517,8 +1519,18 @@ function EnvelopeCard({
                       className="w-6 h-6 flex items-center justify-center rounded hover:bg-cyan-500/15 text-[#faf5eb]/30 hover:text-cyan-400 transition-colors"
                       title="Edit transaction"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
                       </svg>
                     </button>
                     <button
@@ -1529,8 +1541,18 @@ function EnvelopeCard({
                       className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/15 text-[#faf5eb]/30 hover:text-red-400 transition-colors"
                       title="Delete transaction"
                     >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -1563,9 +1585,13 @@ function EnvelopeCard({
 
 function SummaryBar({
   envelopes,
+  reservedBills,
+  spendableLeft,
   onCreateCategory,
 }: {
   envelopes: Envelope[];
+  reservedBills?: number;
+  spendableLeft?: number;
   onCreateCategory?: () => void;
 }) {
   const totalAllocated = envelopes.reduce((s, e) => s + e.allocated, 0);
@@ -1628,10 +1654,40 @@ function SummaryBar({
           )}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div>
+          <div
+            className={"text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1"}
+          >
+            RESERVED FOR BILLS
+          </div>
+          <div
+            className={"text-2xl font-bold text-[#faf5eb]"}
+            style={{
+              fontFeatureSettings: "'tnum' on",
+            }}
+          >
+            {reservedBills !== undefined ? formatMoney(reservedBills) : "—"}
+          </div>
+        </div>
+        <div>
+          <div
+            className={"text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1"}
+          >
+            SPENDABLE LEFT
+          </div>
+          <div
+            className={`text-2xl font-bold ${spendableLeft !== undefined && spendableLeft >= 0 ? "text-cyan-400" : "text-red-400"}`}
+            style={{
+              fontFeatureSettings: "'tnum' on",
+            }}
+          >
+            {spendableLeft !== undefined ? formatMoney(spendableLeft) : "—"}
+          </div>
+        </div>
         <div>
           <div className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1">
-            TOTAL ALLOCATED
+            ALLOCATED
           </div>
           <div
             className="text-2xl font-bold text-[#faf5eb]"
@@ -1642,7 +1698,7 @@ function SummaryBar({
         </div>
         <div>
           <div className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1">
-            TOTAL SPENT
+            SPENT
           </div>
           <div
             className="text-2xl font-bold text-[#faf5eb]/70"
@@ -1653,7 +1709,7 @@ function SummaryBar({
         </div>
         <div>
           <div className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1">
-            TOTAL REMAINING
+            REMAINING
           </div>
           <div
             className={`text-2xl font-bold ${totalRemaining >= 0 ? "text-cyan-400" : "text-red-400"}`}
@@ -1722,6 +1778,10 @@ export function DigitalEnvelopes() {
   const [paycheckId, setPaycheckId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Paycheck totals for SummaryBar
+  const [reservedBills, setReservedBills] = useState<number>(0);
+  const [spendableLeft, setSpendableLeft] = useState<number>(0);
+
   // Category CRUD dialog state
   const [categoryDialogMode, setCategoryDialogMode] = useState<
     "create" | "edit" | null
@@ -1749,7 +1809,9 @@ export function DigitalEnvelopes() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setLoadError("Not authenticated. Please sign in to view your envelopes.");
+        setLoadError(
+          "Not authenticated. Please sign in to view your envelopes.",
+        );
         setIsLoading(false);
         return;
       }
@@ -1771,6 +1833,38 @@ export function DigitalEnvelopes() {
       }
 
       setPaycheckId(currentPaycheck.id);
+
+      const periodStart = currentPaycheck.period_start_date;
+      const periodEnd = currentPaycheck.period_end_date;
+      const netAmount = Number(currentPaycheck.net_amount) || 0;
+
+      // Fetch bill_payments assigned to this paycheck with due_date in period
+      let billQuery = supabase
+        .from("bill_payments")
+        .select("planned_amount, actual_amount, is_paid, due_date")
+        .eq("paycheck_id", currentPaycheck.id);
+
+      if (periodStart) {
+        billQuery = billQuery.gte("due_date", periodStart);
+      }
+      if (periodEnd) {
+        billQuery = billQuery.lte("due_date", periodEnd);
+      }
+
+      const { data: billPayments, error: bpError } = await billQuery;
+
+      if (bpError) {
+        console.warn("Failed to load bill payments:", bpError.message);
+      }
+
+      // Compute reservedBills from live bill_payments in period
+      const computedReservedBills = (billPayments || []).reduce((sum, bp) => {
+        // Use actual_amount if paid, otherwise planned_amount
+        const amt = bp.is_paid && bp.actual_amount != null
+          ? Number(bp.actual_amount)
+          : Number(bp.planned_amount);
+        return sum + amt;
+      }, 0);
 
       // Fetch category_spending with joined category data
       const { data: catSpending, error: csError } = await supabase
@@ -1798,6 +1892,16 @@ export function DigitalEnvelopes() {
         throw new Error(`Failed to load transactions: ${txError.message}`);
       }
 
+      // Compute spendable = net pay - reserved bills - total category spending
+      const totalCategorySpent = (catSpending || []).reduce(
+        (sum, cs) => sum + (Number(cs.spent) || 0),
+        0,
+      );
+      const computedSpendable = netAmount - computedReservedBills - totalCategorySpent;
+
+      setReservedBills(computedReservedBills);
+      setSpendableLeft(computedSpendable);
+
       const built = buildEnvelopes(catSpending || [], txns || []);
       setEnvelopes(built);
     } catch (err) {
@@ -1812,6 +1916,37 @@ export function DigitalEnvelopes() {
 
   useEffect(() => {
     loadData();
+
+    // Set up Supabase realtime subscriptions for live updates
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel("digital-envelopes-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bill_payments" },
+        () => { loadData(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        () => { loadData(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "category_spending" },
+        () => { loadData(); },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "paychecks" },
+        () => { loadData(); },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [loadData]);
 
   const handleTap = (id: string) => {
@@ -1906,9 +2041,7 @@ export function DigitalEnvelopes() {
           .eq("id", editingEnvelope.categoryId);
 
         if (catError) {
-          throw new Error(
-            `Failed to update category: ${catError.message}`,
-          );
+          throw new Error(`Failed to update category: ${catError.message}`);
         }
 
         // 2. Update category_spending.planned for the current paycheck
@@ -1921,9 +2054,7 @@ export function DigitalEnvelopes() {
           .eq("id", editingEnvelope.categorySpendingId);
 
         if (csError) {
-          throw new Error(
-            `Failed to update allocation: ${csError.message}`,
-          );
+          throw new Error(`Failed to update allocation: ${csError.message}`);
         }
 
         toast.success("Category updated", {
@@ -1964,9 +2095,7 @@ export function DigitalEnvelopes() {
         .eq("paycheck_id", paycheckId);
 
       if (txError) {
-        throw new Error(
-          `Failed to delete transactions: ${txError.message}`,
-        );
+        throw new Error(`Failed to delete transactions: ${txError.message}`);
       }
 
       // 2. Delete category_spending for this category in this paycheck
@@ -2106,7 +2235,10 @@ export function DigitalEnvelopes() {
   };
 
   // ── Edit Transaction ──
-  const handleOpenEditTransaction = (tx: EnvelopeTransaction, envelope: Envelope) => {
+  const handleOpenEditTransaction = (
+    tx: EnvelopeTransaction,
+    envelope: Envelope,
+  ) => {
     setEditingTransaction({ tx, envelope });
   };
 
@@ -2151,7 +2283,9 @@ export function DigitalEnvelopes() {
         .eq("id", envelope.categorySpendingId);
 
       if (csError) {
-        throw new Error(`Failed to update category spending: ${csError.message}`);
+        throw new Error(
+          `Failed to update category spending: ${csError.message}`,
+        );
       }
 
       // 3. Optimistically update local state
@@ -2191,8 +2325,7 @@ export function DigitalEnvelopes() {
     } catch (err) {
       console.error("Error editing transaction:", err);
       toast.error("Couldn't update transaction", {
-        description:
-          err instanceof Error ? err.message : "Please try again.",
+        description: err instanceof Error ? err.message : "Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -2200,7 +2333,10 @@ export function DigitalEnvelopes() {
   };
 
   // ── Delete Transaction ──
-  const handleOpenDeleteTransaction = (tx: EnvelopeTransaction, envelope: Envelope) => {
+  const handleOpenDeleteTransaction = (
+    tx: EnvelopeTransaction,
+    envelope: Envelope,
+  ) => {
     setDeletingTransaction({ tx, envelope });
   };
 
@@ -2233,7 +2369,9 @@ export function DigitalEnvelopes() {
         .eq("id", envelope.categorySpendingId);
 
       if (csError) {
-        throw new Error(`Failed to update category spending: ${csError.message}`);
+        throw new Error(
+          `Failed to update category spending: ${csError.message}`,
+        );
       }
 
       // 3. Optimistically update local state
@@ -2263,8 +2401,7 @@ export function DigitalEnvelopes() {
     } catch (err) {
       console.error("Error deleting transaction:", err);
       toast.error("Couldn't delete transaction", {
-        description:
-          err instanceof Error ? err.message : "Please try again.",
+        description: err instanceof Error ? err.message : "Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -2362,7 +2499,6 @@ export function DigitalEnvelopes() {
             </button>
           </div>
         </div>
-
         {/* Create Category Dialog */}
         {categoryDialogMode === "create" && (
           <CategoryDialog
@@ -2382,6 +2518,8 @@ export function DigitalEnvelopes() {
         {/* Summary Bar with New Envelope button */}
         <SummaryBar
           envelopes={envelopes}
+          reservedBills={reservedBills}
+          spendableLeft={spendableLeft}
           onCreateCategory={handleOpenCreateCategory}
         />
 
@@ -2395,13 +2533,16 @@ export function DigitalEnvelopes() {
               isExpanded={expandedId === envelope.id}
               onLogSpending={() => handleOpenLogSpending(envelope.id)}
               onEdit={() => handleOpenEditCategory(envelope)}
-              onEditTransaction={(tx) => handleOpenEditTransaction(tx, envelope)}
-              onDeleteTransaction={(tx) => handleOpenDeleteTransaction(tx, envelope)}
+              onEditTransaction={(tx) =>
+                handleOpenEditTransaction(tx, envelope)
+              }
+              onDeleteTransaction={(tx) =>
+                handleOpenDeleteTransaction(tx, envelope)
+              }
             />
           ))}
         </div>
       </div>
-
       {/* Log Spending Dialog */}
       {logSpendingEnvelope && (
         <LogSpendingDialog
@@ -2418,7 +2559,6 @@ export function DigitalEnvelopes() {
           }
         />
       )}
-
       {/* Create / Edit Category Dialog */}
       {categoryDialogMode && (
         <CategoryDialog
@@ -2432,7 +2572,6 @@ export function DigitalEnvelopes() {
           isSubmitting={isSubmitting}
         />
       )}
-
       {/* Edit Transaction Dialog */}
       {editingTransaction && (
         <EditTransactionDialog
@@ -2444,7 +2583,6 @@ export function DigitalEnvelopes() {
           isSubmitting={isSubmitting}
         />
       )}
-
       {/* Delete Transaction Confirm Dialog */}
       {deletingTransaction && (
         <DeleteTransactionConfirm

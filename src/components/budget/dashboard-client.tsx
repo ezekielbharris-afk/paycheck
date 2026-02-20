@@ -8,11 +8,7 @@ import { SummaryCard } from "@/components/budget/summary-card";
 import { BillsGrid } from "@/components/budget/bills-grid";
 import { DigitalEnvelopes } from "@/components/budget/digital-envelopes";
 import { AddBillDialog } from "@/components/budget/add-bill-dialog";
-import {
-  Paycheck,
-  BillPayment,
-  PaySchedule,
-} from "@/types/budget";
+import { Paycheck, BillPayment, PaySchedule } from "@/types/budget";
 import { calculateDaysUntil } from "@/lib/budget-utils";
 import { toast } from "sonner";
 
@@ -183,12 +179,6 @@ export function DashboardClient() {
             periodEndDate={paycheck.period_end_date}
             netAmount={paycheck.net_amount}
             daysUntilNext={daysUntilNext}
-          />
-          <SummaryCard
-            netPay={paycheck.net_amount}
-            reservedBills={paycheck.reserved_bills}
-            reservedSavings={paycheck.reserved_savings}
-            spendable={paycheck.spendable}
           />
 
           <DigitalEnvelopes />
