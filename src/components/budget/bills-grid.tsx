@@ -3,42 +3,17 @@
 import { useState, useMemo } from "react";
 import { BillPayment } from "@/types/budget";
 import { formatCurrency } from "@/lib/budget-utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { EditBillDialog } from "@/components/budget/edit-bill-dialog";
 
 interface BillsGridProps {
   bills: BillPayment[];
   onBillPaid: (billPaymentId: string, actualAmount: number) => void;
   onBillUndo?: (billPaymentId: string) => void;
   onBillDelete?: (billPaymentId: string) => void;
+  onBillUpdated?: () => void;
   onAddBill?: () => void;
   periodStartDate?: string;
   periodEndDate?: string;
-}
-
-/**
- * Generate a 2-letter "element symbol" from a bill name.
- * E.g. "Rent" -> "Rn", "Credit Card" -> "Cc", "Electric" -> "El"
- */
-function getBillSymbol(name: string): string {
-  if (!name) return "??";
-  const words = name.trim().split(/\s+/);
-  if (words.length >= 2) {
-    return (
-      (words[0][0] + words[1][0]).charAt(0).toUpperCase() +
-      (words[0][0] + words[1][0]).charAt(1).toLowerCase()
-    );
-  }
-  if (name.length === 1) return name[0].toUpperCase() + name[0].toLowerCase();
-  return name[0].toUpperCase() + name[1].toLowerCase();
 }
 
 /**
@@ -65,12 +40,13 @@ export function BillsGrid({
   onBillPaid,
   onBillUndo,
   onBillDelete,
+  onBillUpdated,
   onAddBill,
   periodStartDate,
   periodEndDate,
 }: BillsGridProps) {
   const [selectedBill, setSelectedBill] = useState<BillPayment | null>(null);
-  const [actualAmount, setActualAmount] = useState("");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const groupedBills = useMemo(() => groupBillsByDueDay(bills), [bills]);
 
@@ -83,22 +59,8 @@ export function BillsGrid({
   );
 
   const handleBillClick = (bill: BillPayment) => {
-    if (bill.is_paid) {
-      // Toggle undo for paid bills
-      if (onBillUndo) {
-        onBillUndo(bill.id);
-      }
-      return;
-    }
     setSelectedBill(bill);
-    setActualAmount(bill.planned_amount.toString());
-  };
-
-  const handleConfirmPaid = () => {
-    if (!selectedBill) return;
-    onBillPaid(selectedBill.id, parseFloat(actualAmount));
-    setSelectedBill(null);
-    setActualAmount("");
+    setIsEditDialogOpen(true);
   };
 
   if (bills.length === 0) {
@@ -137,7 +99,7 @@ export function BillsGrid({
         </div>
 
         {/* Bills Grid */}
-        <div className="grid gap-4 relative" style={{ gridTemplateColumns: `repeat(min(${groupedBills.size}, 12), 1fr)` }}>
+        <div className="grid gap-4 relative grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-8">
           {Array.from(groupedBills.entries()).map(
             ([dueDay, dueDayBills], groupIndex) => {
               const groupTotal = dueDayBills.reduce(
@@ -158,10 +120,7 @@ export function BillsGrid({
                   : true;
 
               return (
-                <div
-                  key={dueDay}
-                  className="flex flex-col gap-2 relative"
-                >
+                <div key={dueDay} className="flex flex-col gap-2 relative">
                   {/* Cyan period indicator line - above the day header */}
                   {isGroupInCurrentPeriod && (
                     <div className="border-t-2 border-[#06B6D4]" />
@@ -188,13 +147,13 @@ export function BillsGrid({
                           <div
                             onClick={() => handleBillClick(billPayment)}
                             className={`
-                            relative border-2 border-[#2a2520] bg-[#1a1714]
-                            rounded px-3 py-2 cursor-pointer
-                            transition-all duration-200 ease-in-out
-                            hover:scale-105 hover:brightness-125
-                            ${!isGroupInCurrentPeriod ? "opacity-30" : isPaid ? "opacity-50" : "opacity-100"}
-                            min-w-[100px]
-                          `}
+                          relative border-2 border-[#2a2520] bg-[#1a1714]
+                          rounded px-3 py-2 cursor-pointer
+                          transition-all duration-200 ease-in-out
+                          hover:scale-105 hover:brightness-125
+                          ${!isGroupInCurrentPeriod ? "opacity-30" : isPaid ? "opacity-50" : "opacity-100"}
+                          min-w-[100px]
+                        `}
                           >
                             {/* Paid checkmark */}
                             {isPaid && (
@@ -202,12 +161,8 @@ export function BillsGrid({
                                 ✓
                               </div>
                             )}
-                            {/* Symbol */}
-                            <div className="text-2xl font-black text-[#faf5eb] mb-1">
-                              {getBillSymbol(billName)}
-                            </div>
                             {/* Name */}
-                            <div className="text-xs font-light text-[#faf5eb]/70 mb-1 leading-tight">
+                            <div className="text-sm font-bold text-[#faf5eb] mb-1 leading-tight">
                               {billName}
                             </div>
                             {/* Amount */}
@@ -265,59 +220,20 @@ export function BillsGrid({
           </div>
         </div>
       </div>
-      {/* Mark as Paid Dialog */}
-      <Dialog open={!!selectedBill} onOpenChange={() => setSelectedBill(null)}>
-        <DialogContent className="bg-[#1a1714] border-[#2a2520] text-[#faf5eb]">
-          <DialogHeader>
-            <DialogTitle className="text-[#faf5eb]">
-              Mark Bill as Paid
-            </DialogTitle>
-            <DialogDescription className="text-[#faf5eb]/60">
-              {selectedBill?.bill?.name} — Due on{" "}
-              {selectedBill &&
-                new Date(selectedBill.due_date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="actualAmount" className="text-[#faf5eb]/80">
-                Actual Amount Paid
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#faf5eb]/40">
-                  $
-                </span>
-                <Input
-                  id="actualAmount"
-                  type="number"
-                  step="0.01"
-                  value={actualAmount}
-                  onChange={(e) => setActualAmount(e.target.value)}
-                  className="pl-7 bg-[#0f0d0a] border-[#2a2520] text-[#faf5eb]"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setSelectedBill(null)}
-                className="flex-1 border-[#2a2520] text-[#faf5eb] hover:bg-[#2a2520]"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirmPaid}
-                className="flex-1 bg-[#06B6D4] hover:bg-[#06B6D4]/80 text-[#0f0d0a] font-bold"
-              >
-                Mark as Paid
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Bill Dialog */}
+      <EditBillDialog
+        bill={selectedBill}
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) setSelectedBill(null);
+        }}
+        onBillUpdated={() => {
+          if (onBillUpdated) onBillUpdated();
+        }}
+        onBillPaid={onBillPaid}
+        onBillUndo={onBillUndo}
+      />
     </>
   );
 }

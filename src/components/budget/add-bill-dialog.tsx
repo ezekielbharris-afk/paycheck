@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BillFrequency } from '@/types/budget';
+import { toast } from 'sonner';
 
 interface AddBillDialogProps {
   open: boolean;
@@ -68,10 +69,13 @@ export function AddBillDialog({ open, onOpenChange, onBillAdded }: AddBillDialog
       setDueDay('');
       setFrequency('monthly');
       
+      toast.success('Bill added successfully');
       onBillAdded();
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add bill');
+      const message = err instanceof Error ? err.message : 'Failed to add bill';
+      setError(message);
+      toast.error('Failed to add bill', { description: message });
     } finally {
       setIsSubmitting(false);
     }

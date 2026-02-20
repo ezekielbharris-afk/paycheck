@@ -15,6 +15,7 @@ import {
   PaySchedule,
 } from "@/types/budget";
 import { calculateDaysUntil } from "@/lib/budget-utils";
+import { toast } from "sonner";
 
 export function DashboardClient() {
   const [paycheck, setPaycheck] = useState<Paycheck | null>(null);
@@ -114,6 +115,9 @@ export function DashboardClient() {
       await loadDashboardData();
     } catch (error) {
       console.error("Error marking bill paid:", error);
+      toast.error("Failed to mark bill as paid", {
+        description: "Please try again.",
+      });
     }
   };
 
@@ -135,6 +139,9 @@ export function DashboardClient() {
       await loadDashboardData();
     } catch (error) {
       console.error("Error undoing bill payment:", error);
+      toast.error("Failed to undo payment", {
+        description: "Please try again.",
+      });
     }
   };
 
@@ -152,6 +159,9 @@ export function DashboardClient() {
       await loadDashboardData();
     } catch (error) {
       console.error("Error deleting bill payment:", error);
+      toast.error("Failed to delete bill", {
+        description: "Please try again.",
+      });
     }
   };
 
@@ -193,6 +203,9 @@ export function DashboardClient() {
       await loadDashboardData();
     } catch (error) {
       console.error("Error logging spending:", error);
+      toast.error("Failed to log spending", {
+        description: "Please try again.",
+      });
     }
   };
 
@@ -246,6 +259,7 @@ export function DashboardClient() {
             onBillPaid={handleBillPaid}
             onBillUndo={handleBillUndo}
             onBillDelete={handleBillDelete}
+            onBillUpdated={loadDashboardData}
             onAddBill={() => setIsAddBillOpen(true)}
             periodStartDate={paycheck.period_start_date}
             periodEndDate={paycheck.period_end_date}

@@ -7,18 +7,17 @@ import {
   OctagonX,
   TriangleAlert,
 } from "lucide-react"
-import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="dark"
+      position="bottom-center"
       className="toaster group"
+      duration={3000}
       icons={{
         success: <CircleCheck className="h-4 w-4" />,
         info: <Info className="h-4 w-4" />,
@@ -29,12 +28,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:bg-[#1a1714] group-[.toaster]:text-[#faf5eb] group-[.toaster]:border-[#2a2520] group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-[#faf5eb]/60",
           actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+            "group-[.toast]:bg-[#06B6D4] group-[.toast]:text-[#0f0d0a]",
           cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+            "group-[.toast]:bg-[#2a2520] group-[.toast]:text-[#faf5eb]/60",
+          success:
+            "group-[.toaster]:!border-[#10b981]/30",
+          error:
+            "group-[.toaster]:!border-[#ef4444]/30",
         },
       }}
       {...props}
