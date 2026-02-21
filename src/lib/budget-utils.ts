@@ -116,7 +116,8 @@ export function getBudgetHealthColor(spent: number, planned: number): string {
   if (spent === 0) return 'text-muted-foreground';
   const percentage = (spent / planned) * 100;
   
-  if (percentage >= 100) return 'text-destructive';
+  if (percentage > 100.1) return 'text-destructive';
+  if (Math.abs(percentage - 100) < 0.1) return 'text-green-500';
   if (percentage >= 80) return 'text-warning';
   return 'text-success';
 }
@@ -125,9 +126,17 @@ export function getBudgetHealthBg(spent: number, planned: number): string {
   if (spent === 0) return 'bg-muted';
   const percentage = (spent / planned) * 100;
   
-  if (percentage >= 100) return 'bg-destructive';
+  if (percentage > 100.1) return 'bg-destructive';
+  if (Math.abs(percentage - 100) < 0.1) return 'bg-green-500';
   if (percentage >= 80) return 'bg-warning';
   return 'bg-success';
+}
+
+export function getBudgetHealthLabel(spent: number, planned: number): string | null {
+  if (planned === 0) return null;
+  const percentage = (spent / planned) * 100;
+  if (Math.abs(percentage - 100) < 0.1) return 'Complete';
+  return null;
 }
 
 export function getProgressPercentage(spent: number, planned: number): number {

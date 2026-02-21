@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CategorySpending } from '@/types/budget';
-import { getBudgetHealthColor, getBudgetHealthBg, getProgressPercentage } from '@/lib/budget-utils';
+import { getBudgetHealthColor, getBudgetHealthBg, getProgressPercentage, getBudgetHealthLabel } from '@/lib/budget-utils';
 import {
   Dialog,
   DialogContent,
@@ -55,6 +55,7 @@ export function CategoriesGrid({ categories, onSpendingLogged }: CategoriesGridP
             const percentage = getProgressPercentage(categorySpend.spent, categorySpend.planned);
             const healthColor = getBudgetHealthColor(categorySpend.spent, categorySpend.planned);
             const healthBg = getBudgetHealthBg(categorySpend.spent, categorySpend.planned);
+            const healthLabel = getBudgetHealthLabel(categorySpend.spent, categorySpend.planned);
 
             return (
               <button
@@ -66,15 +67,22 @@ export function CategoriesGrid({ categories, onSpendingLogged }: CategoriesGridP
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-bold text-lg">{categorySpend.category?.name}</h3>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">
-                        {categorySpend.category?.type}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                          {categorySpend.category?.type}
+                        </p>
+                        {healthLabel && (
+                          <span className="text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-green-500/15 text-green-500 border border-green-500/20">
+                            {healthLabel.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className={`text-right ${healthColor}`}>
                       <div className="text-2xl font-bold text-currency">
                         ${categorySpend.remaining.toFixed(2)}
                       </div>
-                      <div className="text-xs">left</div>
+                      <div className="text-xs">{healthLabel ? healthLabel.toLowerCase() : 'left'}</div>
                     </div>
                   </div>
 

@@ -11,7 +11,7 @@ import type {
 } from "@/types/budget";
 
 // ─── Types ──────────────────────────────────────────────────
-type EnvelopeState = "healthy" | "near-limit" | "over-budget";
+type EnvelopeState = "healthy" | "near-limit" | "over-budget" | "complete";
 
 interface EnvelopeTransaction {
   id: string;
@@ -124,12 +124,25 @@ function computeState(spent: number, allocated: number): EnvelopeState {
   if (allocated === 0) return "healthy";
   const pct = spent / allocated;
   if (pct > 1) return "over-budget";
+  // Use a small epsilon for floating point comparison
+  if (Math.abs(pct - 1) < 0.001) return "complete";
   if (pct >= 0.8) return "near-limit";
   return "healthy";
 }
 
 function getStateColors(state: EnvelopeState) {
   switch (state) {
+    case "complete":
+      return {
+        accent: "#16a249",
+        accentBg: "rgba(22, 162, 73, 0.12)",
+        barBg: "rgba(22, 162, 73, 0.25)",
+        barFill: "#16a249",
+        badge: "bg-green-500/15 text-green-400 border-green-500/20",
+        text: "text-green-400",
+        glow: "shadow-[0_0_20px_rgba(22,162,73,0.08)]",
+        label: "COMPLETE",
+      };
     case "healthy":
       return {
         accent: "#06B6D4",
@@ -1473,8 +1486,8 @@ function EnvelopeCard({
             />
           </div>
           <div className="text-right">
-            <span className="text-[10px] text-[#faf5eb]/30">
-              {pct.toFixed(0)}% used
+            <span className={`text-[10px] ${envelope.state === "complete" ? "text-green-400/60 font-semibold" : "text-[#faf5eb]/30"}`}>
+              {envelope.state === "complete" ? "100% — COMPLETE" : `${pct.toFixed(0)}% used`}
             </span>
           </div>
         </div>
