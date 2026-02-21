@@ -75,8 +75,9 @@ function buildGridItems(
     groups.get(dueDay)!.push({ bill, payment, isInCurrentPeriod });
   }
 
-  // Sort by due day
-  return new Map([...groups.entries()].sort((a, b) => a[0] - b[0]));
+  // Sort by due day (avoid iterating MapIterator for older TS targets)
+  const sortedEntries = Array.from(groups).sort((a, b) => a[0] - b[0]);
+  return new Map(sortedEntries);
 }
 
 export function BillsGrid({

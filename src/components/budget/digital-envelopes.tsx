@@ -1390,7 +1390,6 @@ function EnvelopeCard({
       `}
       style={{
         borderColor: isExpanded ? colors.accent : undefined,
-        ringColor: isExpanded ? colors.accent : undefined,
       }}
     >
       {/* Envelope flap / top accent line */}
@@ -1427,7 +1426,7 @@ function EnvelopeCard({
                   e.stopPropagation();
                   onEdit();
                 }}
-                className="w-7 h-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 hover:bg-[#2a2520] transition-all duration-200 text-[#faf5eb]/40 hover:text-[#faf5eb]/70"
+                className="w-7 h-7 flex items-center justify-center rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-[#2a2520] transition-all duration-200 text-[#faf5eb]/40 hover:text-[#faf5eb]/70"
                 title="Edit category"
               >
                 <svg
@@ -1493,7 +1492,7 @@ function EnvelopeCard({
         </div>
 
         {/* Tap hint */}
-        <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex items-center justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
           <span className="text-[10px] text-[#faf5eb]/30 tracking-wider">
             TAP TO {isExpanded ? "CLOSE" : "VIEW DETAILS"}
           </span>
@@ -1526,7 +1525,7 @@ function EnvelopeCard({
                   </span>
                   {/* Edit / Delete actions — visible on hover */}
                   {(onEditTransaction || onDeleteTransaction) && (
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover/tx:opacity-100 transition-opacity duration-150">
+                    <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover/tx:opacity-100 transition-opacity duration-150">
                       {onEditTransaction && (
                         <button
                           onClick={(e) => {
@@ -1629,27 +1628,27 @@ function SummaryBar({
   const healthyCount = envelopes.filter((e) => e.state === "healthy").length;
 
   return (
-    <div className="bg-[#1a1714] border border-[#2a2520] rounded-[10px] p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-[#1a1714] border border-[#2a2520] rounded-[10px] p-4 sm:p-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h2
-          className="text-xl font-bold text-[#faf5eb]"
+          className="text-lg sm:text-xl font-bold text-[#faf5eb]"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           Digital Envelopes
         </h2>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 text-[11px]">
-            <span className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px]">
+            <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-cyan-400" />
               <span className="text-[#faf5eb]/50">{healthyCount} healthy</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
               <span className="text-[#faf5eb]/50">
                 {nearLimitCount} caution
               </span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-red-400" />
               <span className="text-[#faf5eb]/50">{overBudgetCount} over</span>
             </span>
@@ -1657,7 +1656,7 @@ function SummaryBar({
           {onCreateCategory && (
             <button
               onClick={onCreateCategory}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold tracking-wider bg-cyan-500 text-[#0f0d0a] hover:bg-cyan-400 transition-colors ml-2"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold tracking-wider bg-cyan-500 text-[#0f0d0a] hover:bg-cyan-400 transition-colors shrink-0"
             >
               <svg
                 className="w-3 h-3"
@@ -1677,7 +1676,7 @@ function SummaryBar({
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
         <div>
           <div
             className={"text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1"}
@@ -1685,7 +1684,7 @@ function SummaryBar({
             RESERVED FOR BILLS
           </div>
           <div
-            className={"text-2xl font-bold text-[#faf5eb]"}
+            className={"text-lg sm:text-2xl font-bold text-[#faf5eb]"}
             style={{
               fontFeatureSettings: "'tnum' on",
             }}
@@ -1700,7 +1699,7 @@ function SummaryBar({
             SPENDABLE LEFT
           </div>
           <div
-            className={`text-2xl font-bold ${spendableLeft !== undefined && spendableLeft >= 0 ? "text-cyan-400" : "text-red-400"}`}
+            className={`text-lg sm:text-2xl font-bold ${spendableLeft !== undefined && spendableLeft >= 0 ? "text-cyan-400" : "text-red-400"}`}
             style={{
               fontFeatureSettings: "'tnum' on",
             }}
@@ -1713,7 +1712,7 @@ function SummaryBar({
             ALLOCATED
           </div>
           <div
-            className="text-2xl font-bold text-[#faf5eb]"
+            className="text-lg sm:text-2xl font-bold text-[#faf5eb]"
             style={{ fontFeatureSettings: "'tnum' on" }}
           >
             {formatMoney(totalAllocated)}
@@ -1724,18 +1723,18 @@ function SummaryBar({
             SPENT
           </div>
           <div
-            className="text-2xl font-bold text-[#faf5eb]/70"
+            className="text-lg sm:text-2xl font-bold text-[#faf5eb]/70"
             style={{ fontFeatureSettings: "'tnum' on" }}
           >
             {formatMoney(totalSpent)}
           </div>
         </div>
-        <div>
+        <div className="col-span-2 sm:col-span-1">
           <div className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1">
             REMAINING
           </div>
           <div
-            className={`text-2xl font-bold ${totalRemaining >= 0 ? "text-cyan-400" : "text-red-400"}`}
+            className={`text-lg sm:text-2xl font-bold ${totalRemaining >= 0 ? "text-cyan-400" : "text-red-400"}`}
             style={{ fontFeatureSettings: "'tnum' on" }}
           >
             {formatMoney(totalRemaining)}
