@@ -1609,11 +1609,13 @@ function SummaryBar({
   envelopes,
   reservedBills,
   spendableLeft,
+  unpaidBillsTotal,
   onCreateCategory,
 }: {
   envelopes: Envelope[];
   reservedBills?: number;
   spendableLeft?: number;
+  unpaidBillsTotal?: number;
   onCreateCategory?: () => void;
 }) {
   const totalAllocated = envelopes.reduce((s, e) => s + e.allocated, 0);
@@ -1676,7 +1678,7 @@ function SummaryBar({
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
         <div>
           <div
             className={"text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-1"}
@@ -1690,6 +1692,21 @@ function SummaryBar({
             }}
           >
             {reservedBills !== undefined ? formatMoney(reservedBills) : "—"}
+          </div>
+        </div>
+        <div>
+          <div
+            className={"text-[10px] tracking-[0.15em] mb-1 text-amber-400/70"}
+          >
+            STILL OWED FOR BILLS
+          </div>
+          <div
+            className={`text-lg sm:text-2xl font-bold ${unpaidBillsTotal !== undefined && unpaidBillsTotal > 0 ? "text-amber-400" : "text-emerald-400"}`}
+            style={{
+              fontFeatureSettings: "'tnum' on",
+            }}
+          >
+            {unpaidBillsTotal !== undefined ? formatMoney(unpaidBillsTotal) : "—"}
           </div>
         </div>
         <div>
@@ -1803,6 +1820,7 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
   // Paycheck totals for SummaryBar
   const [reservedBills, setReservedBills] = useState<number>(0);
   const [spendableLeft, setSpendableLeft] = useState<number>(0);
+  const [unpaidBillsTotal, setUnpaidBillsTotal] = useState<number>(0);
 
   // Category CRUD dialog state
   const [categoryDialogMode, setCategoryDialogMode] = useState<
@@ -1904,6 +1922,14 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
         return sum + amt;
       }, 0);
 
+      // Compute total still owed (unpaid bills only)
+      const computedUnpaidBills = (billPayments || []).reduce((sum, bp) => {
+        if (!bp.is_paid) {
+          return sum + Number(bp.planned_amount);
+        }
+        return sum;
+      }, 0);
+
       // Fetch category_spending with joined category data
       const { data: catSpending, error: csError } = await supabase
         .from("category_spending")
@@ -1935,6 +1961,7 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
 
       setReservedBills(computedReservedBills);
       setSpendableLeft(computedSpendable);
+      setUnpaidBillsTotal(computedUnpaidBills);
 
       const built = buildEnvelopes(catSpending || [], txns || []);
       setEnvelopes(built);
@@ -1995,7 +2022,7 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
 
     return () => {
       mounted = false;
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
   }, [loadData]);
 
@@ -2575,6 +2602,7 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
           envelopes={envelopes}
           reservedBills={reservedBills}
           spendableLeft={spendableLeft}
+          unpaidBillsTotal={unpaidBillsTotal}
           onCreateCategory={readOnly ? undefined : handleOpenCreateCategory}
         />
 

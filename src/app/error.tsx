@@ -12,6 +12,24 @@ export default function GlobalError({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.error(error)
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      // eslint-disable-next-line no-console
+      console.error('Unhandled promise rejection:', event.reason)
+    }
+
+    const onWindowError = (event: ErrorEvent) => {
+      // eslint-disable-next-line no-console
+      console.error('Window error:', event.error ?? event.message)
+    }
+
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
+    window.addEventListener('error', onWindowError)
+
+    return () => {
+      window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      window.removeEventListener('error', onWindowError)
+    }
   }, [error])
 
   return (
