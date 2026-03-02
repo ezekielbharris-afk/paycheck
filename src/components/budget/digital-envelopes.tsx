@@ -3,6 +3,15 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/auth";
 import { toast } from "sonner";
+import { LayoutGrid, Table as TableIcon, Pencil, Trash2 } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 import type {
   CategorySpending,
   Category,
@@ -12,6 +21,7 @@ import type {
 
 // ─── Types ──────────────────────────────────────────────────
 type EnvelopeState = "healthy" | "near-limit" | "over-budget" | "complete";
+type ViewMode = "cards" | "table";
 
 interface EnvelopeTransaction {
   id: string;
@@ -1611,12 +1621,16 @@ function SummaryBar({
   spendableLeft,
   unpaidBillsTotal,
   onCreateCategory,
+  viewMode,
+  onViewModeChange,
 }: {
   envelopes: Envelope[];
   reservedBills?: number;
   spendableLeft?: number;
   unpaidBillsTotal?: number;
   onCreateCategory?: () => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
 }) {
   const totalAllocated = envelopes.reduce((s, e) => s + e.allocated, 0);
   const totalSpent = envelopes.reduce((s, e) => s + e.spent, 0);
@@ -1654,6 +1668,33 @@ function SummaryBar({
               <span className="w-2 h-2 rounded-full bg-red-400" />
               <span className="text-[#faf5eb]/50">{overBudgetCount} over</span>
             </span>
+          </div>
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-[#0f0d0a] border border-[#2a2520] rounded-lg p-0.5 shrink-0">
+            <button
+              onClick={() => onViewModeChange("cards")}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold tracking-wider transition-all duration-200 ${
+                viewMode === "cards"
+                  ? "bg-[#2a2520] text-[#faf5eb]"
+                  : "text-[#faf5eb]/40 hover:text-[#faf5eb]/60"
+              }`}
+              title="Card view"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Cards</span>
+            </button>
+            <button
+              onClick={() => onViewModeChange("table")}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold tracking-wider transition-all duration-200 ${
+                viewMode === "table"
+                  ? "bg-[#2a2520] text-[#faf5eb]"
+                  : "text-[#faf5eb]/40 hover:text-[#faf5eb]/60"
+              }`}
+              title="Table view"
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Table</span>
+            </button>
           </div>
           {onCreateCategory && (
             <button
@@ -1762,6 +1803,302 @@ function SummaryBar({
   );
 }
 
+// ─── Transactions Table View ──────────────────────────────
+
+interface FlatTransaction {
+  id: string;
+  date: string;
+  rawDate: string;
+  description: string;
+  categoryName: string;
+  categoryIcon: string;
+  categoryId: string;
+  amount: number;
+  state: EnvelopeState;
+  envelope: Envelope;
+}
+
+function TransactionsTableView({
+  envelopes,
+  onEditTransaction,
+  onDeleteTransaction,
+  onLogSpending,
+  readOnly,
+}: {
+  envelopes: Envelope[];
+  onEditTransaction?: (tx: EnvelopeTransaction, envelope: Envelope) => void;
+  onDeleteTransaction?: (tx: EnvelopeTransaction, envelope: Envelope) => void;
+  onLogSpending?: (id: string) => void;
+  readOnly?: boolean;
+}) {
+  const [sortField, setSortField] = useState<"date" | "category" | "amount">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  // Flatten all transactions from all envelopes
+  const flatTransactions: FlatTransaction[] = envelopes.flatMap((env) =>
+    env.transactions.map((tx) => ({
+      id: tx.id,
+      date: tx.date,
+      rawDate: tx.rawDate,
+      description: tx.label,
+      categoryName: env.name,
+      categoryIcon: env.icon,
+      categoryId: env.id,
+      amount: tx.amount,
+      state: env.state,
+      envelope: env,
+    })),
+  );
+
+  // Sort
+  const sorted = [...flatTransactions].sort((a, b) => {
+    let cmp = 0;
+    switch (sortField) {
+      case "date":
+        cmp = new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime();
+        break;
+      case "category":
+        cmp = a.categoryName.localeCompare(b.categoryName);
+        break;
+      case "amount":
+        cmp = a.amount - b.amount;
+        break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
+  const handleSort = (field: "date" | "category" | "amount") => {
+    if (sortField === field) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir(field === "amount" ? "desc" : "asc");
+    }
+  };
+
+  const SortIndicator = ({ field }: { field: string }) => {
+    if (sortField !== field) return <span className="text-[#faf5eb]/20 ml-1">↕</span>;
+    return <span className="text-cyan-400 ml-1">{sortDir === "asc" ? "↑" : "↓"}</span>;
+  };
+
+  // Running total (cumulative from top of sorted list)
+  let runningTotal = 0;
+
+  if (flatTransactions.length === 0) {
+    return (
+      <div className="bg-[#1a1714] border border-[#2a2520] rounded-[10px] p-8 text-center">
+        <div className="text-4xl mb-3">📋</div>
+        <p className="text-[#faf5eb]/50 text-sm">
+          No transactions recorded yet. Log spending in an envelope to see them here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[#1a1714] border border-[#2a2520] rounded-[10px] overflow-hidden">
+      {/* Desktop / Tablet Table */}
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-[#2a2520] hover:bg-transparent">
+              <TableHead
+                className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] font-semibold cursor-pointer select-none h-10 px-4"
+                onClick={() => handleSort("date")}
+              >
+                DATE <SortIndicator field="date" />
+              </TableHead>
+              <TableHead className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] font-semibold h-10 px-4">
+                DESCRIPTION
+              </TableHead>
+              <TableHead
+                className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] font-semibold cursor-pointer select-none h-10 px-4"
+                onClick={() => handleSort("category")}
+              >
+                CATEGORY <SortIndicator field="category" />
+              </TableHead>
+              <TableHead
+                className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] font-semibold cursor-pointer select-none text-right h-10 px-4"
+                onClick={() => handleSort("amount")}
+              >
+                AMOUNT <SortIndicator field="amount" />
+              </TableHead>
+              <TableHead className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] font-semibold text-right h-10 px-4">
+                RUNNING TOTAL
+              </TableHead>
+              {!readOnly && (
+                <TableHead className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] font-semibold text-right h-10 px-4 w-[80px]">
+                  ACTIONS
+                </TableHead>
+              )}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sorted.map((tx) => {
+              runningTotal += tx.amount;
+              const stateColors = getStateColors(tx.state);
+              return (
+                <TableRow
+                  key={tx.id}
+                  className="border-b border-[#2a2520]/50 hover:bg-[#2a2520]/30 transition-colors duration-200 cursor-pointer group"
+                >
+                  <TableCell
+                    className="text-[13px] text-[#faf5eb]/60 px-4 py-3"
+                    style={{ fontFeatureSettings: "'tnum' on", fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {tx.date}
+                  </TableCell>
+                  <TableCell className="text-[13px] text-[#faf5eb] px-4 py-3 font-medium max-w-[200px] truncate">
+                    {tx.description}
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 text-[12px] text-[#faf5eb]/70">
+                      <span className="text-sm">{tx.categoryIcon}</span>
+                      {tx.categoryName}
+                    </span>
+                  </TableCell>
+                  <TableCell
+                    className="text-right text-[14px] font-bold px-4 py-3"
+                    style={{ fontFeatureSettings: "'tnum' on", fontFamily: "'Space Grotesk', sans-serif", color: stateColors.accent }}
+                  >
+                    -{formatMoney(tx.amount)}
+                  </TableCell>
+                  <TableCell
+                    className="text-right text-[13px] text-[#faf5eb]/40 px-4 py-3"
+                    style={{ fontFeatureSettings: "'tnum' on", fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {formatMoney(runningTotal)}
+                  </TableCell>
+                  {!readOnly && (
+                    <TableCell className="text-right px-4 py-3">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const envTx = tx.envelope.transactions.find((t) => t.id === tx.id);
+                            if (envTx && onEditTransaction) onEditTransaction(envTx, tx.envelope);
+                          }}
+                          className="p-1.5 rounded-md hover:bg-[#2a2520] text-[#faf5eb]/40 hover:text-cyan-400 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const envTx = tx.envelope.transactions.find((t) => t.id === tx.id);
+                            if (envTx && onDeleteTransaction) onDeleteTransaction(envTx, tx.envelope);
+                          }}
+                          className="p-1.5 rounded-md hover:bg-[#2a2520] text-[#faf5eb]/40 hover:text-red-400 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Mobile List */}
+      <div className="sm:hidden divide-y divide-[#2a2520]/50">
+        {/* Mobile sort controls */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#2a2520]">
+          <span className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em]">SORT BY:</span>
+          {(["date", "category", "amount"] as const).map((field) => (
+            <button
+              key={field}
+              onClick={() => handleSort(field)}
+              className={`text-[11px] px-2 py-1 rounded-md font-semibold tracking-wider transition-colors ${
+                sortField === field
+                  ? "bg-[#2a2520] text-cyan-400"
+                  : "text-[#faf5eb]/40 hover:text-[#faf5eb]/60"
+              }`}
+            >
+              {field.toUpperCase()}
+              {sortField === field && (
+                <span className="ml-0.5">{sortDir === "asc" ? "↑" : "↓"}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        {sorted.map((tx) => {
+          const stateColors = getStateColors(tx.state);
+          return (
+            <div key={tx.id} className="px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span
+                    className="text-[11px] text-[#faf5eb]/40"
+                    style={{ fontFeatureSettings: "'tnum' on", fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    {tx.date}
+                  </span>
+                  <span className="text-[11px] text-[#faf5eb]/30">•</span>
+                  <span className="inline-flex items-center gap-1 text-[11px] text-[#faf5eb]/50">
+                    <span className="text-xs">{tx.categoryIcon}</span>
+                    {tx.categoryName}
+                  </span>
+                </div>
+                <div className="text-[13px] text-[#faf5eb] font-medium truncate">
+                  {tx.description}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <div
+                  className="text-[14px] font-bold text-right"
+                  style={{ fontFeatureSettings: "'tnum' on", fontFamily: "'Space Grotesk', sans-serif", color: stateColors.accent }}
+                >
+                  -{formatMoney(tx.amount)}
+                </div>
+                {!readOnly && (
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => {
+                        const envTx = tx.envelope.transactions.find((t) => t.id === tx.id);
+                        if (envTx && onEditTransaction) onEditTransaction(envTx, tx.envelope);
+                      }}
+                      className="p-1.5 rounded-md text-[#faf5eb]/30 active:text-cyan-400 transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const envTx = tx.envelope.transactions.find((t) => t.id === tx.id);
+                        if (envTx && onDeleteTransaction) onDeleteTransaction(envTx, tx.envelope);
+                      }}
+                      className="p-1.5 rounded-md text-[#faf5eb]/30 active:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Table Footer - Totals */}
+      <div className="border-t border-[#2a2520] px-4 py-3 flex items-center justify-between">
+        <span className="text-[11px] text-[#faf5eb]/40 tracking-[0.15em] font-semibold">
+          {sorted.length} TRANSACTION{sorted.length !== 1 ? "S" : ""}
+        </span>
+        <span
+          className="text-[14px] font-bold text-[#faf5eb]"
+          style={{ fontFeatureSettings: "'tnum' on", fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          Total: {formatMoney(flatTransactions.reduce((s, t) => s + t.amount, 0))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Loading Skeleton ─────────────────────────────────────
 
 function EnvelopesLoadingSkeleton() {
@@ -1816,6 +2153,12 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
   const [loadError, setLoadError] = useState<string | null>(null);
   const [paycheckId, setPaycheckId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("envelopes-view-mode") as ViewMode) || "cards";
+    }
+    return "cards";
+  });
 
   // Paycheck totals for SummaryBar
   const [reservedBills, setReservedBills] = useState<number>(0);
@@ -2036,6 +2379,13 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
 
   const handleCloseLogSpending = () => {
     setLogSpendingEnvelopeId(null);
+  };
+
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("envelopes-view-mode", mode);
+    }
   };
 
   // ── Create Category ──
@@ -2604,27 +2954,43 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
           spendableLeft={spendableLeft}
           unpaidBillsTotal={unpaidBillsTotal}
           onCreateCategory={readOnly ? undefined : handleOpenCreateCategory}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
         />
 
-        {/* Envelope Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {envelopes.map((envelope) => (
-            <EnvelopeCard
-              key={envelope.id}
-              envelope={envelope}
-              onTap={() => handleTap(envelope.id)}
-              isExpanded={expandedId === envelope.id}
-              onLogSpending={readOnly ? undefined : () => handleOpenLogSpending(envelope.id)}
-              onEdit={readOnly ? undefined : () => handleOpenEditCategory(envelope)}
-              onEditTransaction={readOnly ? undefined : (tx) =>
-                handleOpenEditTransaction(tx, envelope)
-              }
-              onDeleteTransaction={readOnly ? undefined : (tx) =>
-                handleOpenDeleteTransaction(tx, envelope)
-              }
-            />
-          ))}
-        </div>
+        {/* Conditional View: Cards or Table */}
+        {viewMode === "cards" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {envelopes.map((envelope) => (
+              <EnvelopeCard
+                key={envelope.id}
+                envelope={envelope}
+                onTap={() => handleTap(envelope.id)}
+                isExpanded={expandedId === envelope.id}
+                onLogSpending={readOnly ? undefined : () => handleOpenLogSpending(envelope.id)}
+                onEdit={readOnly ? undefined : () => handleOpenEditCategory(envelope)}
+                onEditTransaction={readOnly ? undefined : (tx) =>
+                  handleOpenEditTransaction(tx, envelope)
+                }
+                onDeleteTransaction={readOnly ? undefined : (tx) =>
+                  handleOpenDeleteTransaction(tx, envelope)
+                }
+              />
+            ))}
+          </div>
+        ) : (
+          <TransactionsTableView
+            envelopes={envelopes}
+            readOnly={readOnly}
+            onEditTransaction={readOnly ? undefined : (tx, env) =>
+              handleOpenEditTransaction(tx, env)
+            }
+            onDeleteTransaction={readOnly ? undefined : (tx, env) =>
+              handleOpenDeleteTransaction(tx, env)
+            }
+            onLogSpending={readOnly ? undefined : handleOpenLogSpending}
+          />
+        )}
       </div>
       {/* Log Spending Dialog */}
       {logSpendingEnvelope && (
