@@ -1,4 +1,4 @@
-import { PayFrequency, BillFrequency } from '@/types/budget';
+import { PayFrequency } from '@/types/budget';
 import { addDays, addWeeks, addMonths, subWeeks, subMonths, subDays, differenceInDays, format, parseISO } from 'date-fns';
 
 export function formatCurrency(amount: number): string {
@@ -85,32 +85,12 @@ export function shouldBillBeInPaycheck(
   return billDueDate >= paycheckDate && billDueDate < nextPaycheckDate;
 }
 
-export function getNextBillDueDate(dueDay: number, frequency: BillFrequency, fromDate: Date = new Date()): Date {
-  const now = fromDate;
-  let nextDate = new Date(now.getFullYear(), now.getMonth(), dueDay);
-  
-  if (nextDate <= now) {
-    switch (frequency) {
-      case 'weekly':
-        nextDate = addWeeks(nextDate, 1);
-        break;
-      case 'biweekly':
-        nextDate = addWeeks(nextDate, 2);
-        break;
-      case 'monthly':
-        nextDate = addMonths(nextDate, 1);
-        break;
-      case 'quarterly':
-        nextDate = addMonths(nextDate, 3);
-        break;
-      case 'annual':
-        nextDate = addMonths(nextDate, 12);
-        break;
-    }
-  }
-  
-  return nextDate;
-}
+/**
+ * NOTE: The `getNextBillDueDate` function was removed.
+ * Bill frequency is stored but no longer used in any calculations.
+ * Bills are keyed by due_day only. Users manually duplicate bills for
+ * weekly/bi-weekly occurrences.
+ */
 
 export function getBudgetHealthColor(spent: number, planned: number): string {
   if (spent === 0) return 'text-muted-foreground';

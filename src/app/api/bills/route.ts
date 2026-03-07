@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (currentPaycheck) {
-      // Calculate next due date for this bill based on current paycheck period
+      // Allocate bill to current paycheck based on due_day only (frequency is informational)
       const periodEnd = new Date(currentPaycheck.period_end_date || currentPaycheck.pay_date);
       const dueDate = new Date(periodEnd);
       dueDate.setDate(due_day);

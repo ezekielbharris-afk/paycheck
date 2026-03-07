@@ -100,7 +100,7 @@ export function AddBillDialog({ open, onOpenChange, onBillAdded }: AddBillDialog
             Add New Bill
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Create a recurring bill that will be automatically allocated to paychecks
+            Add a bill with its amount and due date. Frequency is for your reference only — duplicate the bill for each occurrence if needed.
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +161,7 @@ export function AddBillDialog({ open, onOpenChange, onBillAdded }: AddBillDialog
 
           <div className="space-y-2">
             <Label htmlFor="bill-frequency" className="text-sm font-light text-muted-foreground">
-              Frequency
+              Frequency <span className="text-xs opacity-60">(for reference only)</span>
             </Label>
             <Select
               value={frequency}

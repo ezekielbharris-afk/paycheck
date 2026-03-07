@@ -106,7 +106,7 @@ export function BillsStep({ initialData, onComplete, onBack, isLoading }: BillsS
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="frequency" className="text-sm font-light text-foreground">
-              Frequency
+              Frequency <span className="text-xs opacity-60">(for reference only)</span>
             </Label>
             <Select value={frequency} onValueChange={(v) => setFrequency(v as BillFrequency)}>
               <SelectTrigger id="frequency" className="h-10">

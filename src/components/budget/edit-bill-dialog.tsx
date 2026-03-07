@@ -389,7 +389,7 @@ export function EditBillDialog({
                   htmlFor="edit-bill-frequency"
                   className="text-sm font-light text-[#faf5eb]/60"
                 >
-                  Frequency
+                  Frequency <span className="text-xs opacity-60">(for reference only)</span>
                 </Label>
                 <Select
                   value={frequency}
