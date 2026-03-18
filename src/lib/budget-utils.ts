@@ -1,4 +1,4 @@
-import { PayFrequency } from '@/types/budget';
+import { PayFrequency, Bill, BillPayment } from '@/types/budget';
 import { addDays, addWeeks, addMonths, subWeeks, subMonths, subDays, differenceInDays, format, parseISO } from 'date-fns';
 
 export function formatCurrency(amount: number): string {
@@ -122,4 +122,100 @@ export function getBudgetHealthLabel(spent: number, planned: number): string | n
 export function getProgressPercentage(spent: number, planned: number): number {
   if (planned === 0) return 0;
   return Math.min((spent / planned) * 100, 100);
+}
+
+// ─── Reserved-for-Bills Calculation Utilities ──────────────
+
+/**
+ * Determine whether a bill's `due_day` falls within a pay period
+ * defined by start and end dates. Correctly handles periods that
+ * cross a month boundary (e.g. Jan 25 → Feb 10).
+ *
+ * This mirrors the logic in `BillsGrid.buildGridItems`.
+ */
+export function isBillDueInPeriod(
+  dueDay: number,
+  periodStartDate: string,
+  periodEndDate: string,
+): boolean {
+  const startDay = new Date(periodStartDate + 'T00:00:00').getDate();
+  const endDay = new Date(periodEndDate + 'T00:00:00').getDate();
+  const isCrossMonth = startDay > endDay;
+
+  if (isCrossMonth) {
+    // Period spans month boundary: day >= start OR day <= end
+    return dueDay >= startDay || dueDay <= endDay;
+  }
+  return dueDay >= startDay && dueDay <= endDay;
+}
+
+/**
+ * Calculate the total amount reserved for bills in a pay period
+ * using the **master bills list** (no bill_payments required).
+ *
+ * Use this when planning a new paycheck or previewing a period
+ * before bill_payment records have been created.
+ *
+ * @param bills       Array of active `Bill` objects
+ * @param periodStart Period start date (ISO string, e.g. "2025-01-15")
+ * @param periodEnd   Period end date (ISO string, e.g. "2025-01-28")
+ * @returns           Object with `total` and `billsDue` (the matching bills)
+ *
+ * @example
+ * ```ts
+ * const { total, billsDue } = calculateReservedBillsFromBills(
+ *   allBills,
+ *   paycheck.period_start_date,
+ *   paycheck.period_end_date,
+ * );
+ * ```
+ */
+export function calculateReservedBillsFromBills(
+  bills: Bill[],
+  periodStart: string,
+  periodEnd: string,
+): { total: number; billsDue: Bill[] } {
+  const billsDue = bills.filter(
+    (b) => b.is_active && isBillDueInPeriod(b.due_day, periodStart, periodEnd),
+  );
+  const total = billsDue.reduce((sum, b) => sum + b.amount, 0);
+  return { total, billsDue };
+}
+
+/**
+ * Calculate the total amount reserved for bills in a pay period
+ * using existing **bill_payment** records (from the `bill_payments` table).
+ *
+ * This matches the live computation in `DigitalEnvelopes`:
+ *   - Uses `actual_amount` for paid bills (if set)
+ *   - Falls back to `planned_amount` for unpaid bills
+ *
+ * @param billPayments  Array of `BillPayment` rows for the paycheck
+ * @returns             Object with `total`, `paidTotal`, and `unpaidTotal`
+ *
+ * @example
+ * ```ts
+ * const { total, paidTotal, unpaidTotal } =
+ *   calculateReservedBillsFromPayments(billPayments);
+ * ```
+ */
+export function calculateReservedBillsFromPayments(
+  billPayments: BillPayment[],
+): { total: number; paidTotal: number; unpaidTotal: number } {
+  let paidTotal = 0;
+  let unpaidTotal = 0;
+
+  for (const bp of billPayments) {
+    if (bp.is_paid && bp.actual_amount != null) {
+      paidTotal += Number(bp.actual_amount);
+    } else {
+      unpaidTotal += Number(bp.planned_amount);
+    }
+  }
+
+  return {
+    total: paidTotal + unpaidTotal,
+    paidTotal,
+    unpaidTotal,
+  };
 }

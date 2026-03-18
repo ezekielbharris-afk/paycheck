@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         }
 
         const validDates = candidates.filter(
-          d => d >= periodStart && d < periodEnd
+          d => d >= periodStart && d <= periodEnd
         );
 
         for (const dueDate of validDates) {

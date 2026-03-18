@@ -2237,41 +2237,77 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
       const periodEnd = targetPaycheck.period_end_date;
       const netAmount = Number(targetPaycheck.net_amount) || 0;
 
-      // Fetch bill_payments assigned to this paycheck with due_date in period
-      let billQuery = supabase
+      // ── Fetch all active bills to compute reserved amount from frontend logic ──
+      // This mirrors the BillsGrid period-matching logic (by due_day) so the
+      // "Reserved for Bills" number always matches what the user sees in the grid.
+      const { data: allBills, error: billsError } = await supabase
+        .from("bills")
+        .select("id, name, amount, due_day, frequency, is_active")
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+
+      if (billsError) {
+        console.warn("Failed to load bills:", billsError.message);
+      }
+
+      // Also fetch bill_payments so we know paid/unpaid status
+      const { data: billPayments, error: bpError } = await supabase
         .from("bill_payments")
-        .select("planned_amount, actual_amount, is_paid, due_date")
+        .select("planned_amount, actual_amount, is_paid, due_date, bill_id")
         .eq("paycheck_id", targetPaycheck.id);
-
-      if (periodStart) {
-        billQuery = billQuery.gte("due_date", periodStart);
-      }
-      if (periodEnd) {
-        billQuery = billQuery.lte("due_date", periodEnd);
-      }
-
-      const { data: billPayments, error: bpError } = await billQuery;
 
       if (bpError) {
         console.warn("Failed to load bill payments:", bpError.message);
       }
 
-      // Compute reservedBills from live bill_payments in period
-      const computedReservedBills = (billPayments || []).reduce((sum, bp) => {
-        // Use actual_amount if paid, otherwise planned_amount
-        const amt = bp.is_paid && bp.actual_amount != null
-          ? Number(bp.actual_amount)
-          : Number(bp.planned_amount);
-        return sum + amt;
-      }, 0);
+      // ── Determine which bills fall within the period (same logic as BillsGrid) ──
+      const periodStartDay = periodStart
+        ? new Date(periodStart + "T00:00:00").getDate()
+        : null;
+      const periodEndDay = periodEnd
+        ? new Date(periodEnd + "T00:00:00").getDate()
+        : null;
+      const isCrossMonth =
+        periodStartDay !== null &&
+        periodEndDay !== null &&
+        periodStartDay > periodEndDay;
 
-      // Compute total still owed (unpaid bills only)
-      const computedUnpaidBills = (billPayments || []).reduce((sum, bp) => {
-        if (!bp.is_paid) {
-          return sum + Number(bp.planned_amount);
+      // Index bill_payments by bill_id for quick paid-status lookup
+      const paymentsByBillId = new Map<string, { is_paid: boolean; planned_amount: number }>();
+      for (const bp of (billPayments || [])) {
+        paymentsByBillId.set(bp.bill_id, bp);
+      }
+
+      let computedReservedBills = 0;
+      let computedUnpaidBills = 0;
+
+      for (const bill of (allBills || [])) {
+        const dueDay = bill.due_day;
+        let isInCurrentPeriod: boolean;
+
+        if (periodStartDay === null || periodEndDay === null) {
+          isInCurrentPeriod = true;
+        } else if (isCrossMonth) {
+          isInCurrentPeriod = dueDay >= periodStartDay || dueDay <= periodEndDay;
+        } else {
+          isInCurrentPeriod = dueDay >= periodStartDay && dueDay <= periodEndDay;
         }
-        return sum;
-      }, 0);
+
+        if (isInCurrentPeriod) {
+          const amt = Number(bill.amount) || 0;
+          computedReservedBills += amt;
+
+          // Check if this bill has been paid via bill_payments
+          const payment = paymentsByBillId.get(bill.id);
+          if (!payment || !payment.is_paid) {
+            computedUnpaidBills += amt;
+          }
+        }
+      }
+
+      console.log("[DigitalEnvelopes] paycheck_id:", targetPaycheck.id);
+      console.log("[DigitalEnvelopes] bills in period:", computedReservedBills);
+      console.log("[DigitalEnvelopes] unpaid bills:", computedUnpaidBills);
 
       // Fetch category_spending with joined category data
       const { data: catSpending, error: csError } = await supabase

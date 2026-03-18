@@ -100,9 +100,9 @@ Deno.serve(async (req) => {
           candidates.push(candidateDate);
         }
 
-        // Filter to only dates within [periodStart, periodEnd) — inclusive start, exclusive end
+        // Filter to only dates within [periodStart, periodEnd] — inclusive both ends
         const validDates = candidates.filter(
-          d => d >= periodStart && d < periodEnd
+          d => d >= periodStart && d <= periodEnd
         );
 
         // Add ALL valid occurrences (a bill might recur multiple times in one period)
