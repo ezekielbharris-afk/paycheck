@@ -98,10 +98,14 @@ function buildEnvelopes(
         (a, b) =>
           new Date(b.transaction_date).getTime() -
           new Date(a.transaction_date).getTime(),
-      )
-      .slice(0, 8);
+      );
 
-    const spent = Number(cs.spent) || 0;
+    // Use the actual sum of transactions as source of truth for spent.
+    // The category_spending.spent value can drift out of sync if transactions
+    // are added/edited/deleted outside of the normal flow.
+    const transactionSum = catTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const dbSpent = Number(cs.spent) || 0;
+    const spent = transactionSum > 0 ? transactionSum : dbSpent;
     const allocated = Number(cs.planned) || 0;
     const remaining = allocated - spent;
 
@@ -1512,7 +1516,7 @@ function EnvelopeCard({
       {isExpanded && (
         <div className="relative z-10 border-t border-[#2a2520] px-5 pb-5 pt-3 space-y-2">
           <div className="text-[10px] text-[#faf5eb]/40 tracking-[0.15em] mb-2">
-            RECENT TRANSACTIONS
+            TRANSACTIONS
           </div>
           {envelope.transactions.length === 0 ? (
             <div className="text-[12px] text-[#faf5eb]/30 italic">
@@ -2344,6 +2348,31 @@ export function DigitalEnvelopes({ paycheckIdOverride, readOnly = false }: { pay
 
       const built = buildEnvelopes(catSpending || [], txns || []);
       setEnvelopes(built);
+
+      // ── Reconcile: sync category_spending.spent with actual transaction sums ──
+      // This fixes drift caused by manual DB edits, race conditions, etc.
+      for (const env of built) {
+        const csRow = (catSpending || []).find((cs) => cs.category_id === env.categoryId);
+        if (csRow) {
+          const dbSpent = Number(csRow.spent) || 0;
+          const actualSpent = env.spent;
+          // Only update if there's a meaningful difference (> 1 cent)
+          if (Math.abs(dbSpent - actualSpent) > 0.01) {
+            console.warn(
+              `[DigitalEnvelopes] Reconciling "${env.name}": DB spent=${dbSpent}, actual tx sum=${actualSpent}`,
+            );
+            supabase
+              .from("category_spending")
+              .update({ spent: actualSpent, updated_at: new Date().toISOString() })
+              .eq("id", env.categorySpendingId)
+              .then(({ error }) => {
+                if (error) {
+                  console.warn(`Failed to reconcile "${env.name}":`, error.message);
+                }
+              });
+          }
+        }
+      }
     } catch (err) {
       console.error("Error loading envelope data:", err);
       setLoadError(
